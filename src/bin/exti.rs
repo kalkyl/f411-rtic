@@ -3,13 +3,14 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-use stm32f4xx_hal::{
-    gpio::{gpioa::PA5, gpioc::PC13, Edge, ExtiPin, Input, Output, PullUp, PushPull},
-    prelude::*,
-};
+#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, monotonic = rtic::cyccnt::CYCCNT, dispatchers = [USART1])]
+mod app {
+    use stm32f4xx_hal::{
+        gpio::{gpioa::PA5, gpioc::PC13, Edge, ExtiPin, Input, Output, PullUp, PushPull},
+        prelude::*,
+    };
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, monotonic = rtic::cyccnt::CYCCNT)]
-const APP: () = {
+    #[resources]
     struct Resources {
         led: PA5<Output<PushPull>>,
         btn: PC13<Input<PullUp>>,
@@ -49,8 +50,12 @@ const APP: () = {
 
     #[task(binds = EXTI15_10, resources = [btn, led])]
     fn on_exti(ctx: on_exti::Context) {
-        ctx.resources.btn.clear_interrupt_pending_bit();
-        ctx.resources.led.toggle().ok();
+        let on_exti::Resources { mut btn, mut led } = ctx.resources;
+        btn.lock(|btn| btn.clear_interrupt_pending_bit());
+        led.lock(|led| led.toggle().ok());
         defmt::warn!("Button was pressed!");
     }
-};
+
+    #[task]
+    fn _task(_: _task::Context) {}
+}
