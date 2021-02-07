@@ -3,7 +3,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, monotonic = rtic::cyccnt::CYCCNT, dispatchers = [USART1])]
+#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
 mod app {
     use stm32f4xx_hal::{
         gpio::{gpioa::PA5, gpioc::PC13, Edge, ExtiPin, Input, Output, PullUp, PushPull},
@@ -55,7 +55,4 @@ mod app {
         led.lock(|led| led.toggle().ok());
         defmt::warn!("Button was pressed!");
     }
-
-    #[task]
-    fn _task(_: _task::Context) {}
 }
