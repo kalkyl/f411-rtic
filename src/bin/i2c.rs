@@ -36,12 +36,13 @@ mod app {
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
 
+        // Set up I2C.
         let gpiob = ctx.device.GPIOB.split();
         let scl = gpiob.pb8.into_alternate_af4().set_open_drain();
         let sda = gpiob.pb9.into_alternate_af4().set_open_drain();
         let i2c = I2c::i2c1(ctx.device.I2C1, (scl, sda), 400.khz(), clocks);
 
-        // Configure the OLED display
+        // Configure the OLED display.
         let interface = I2CDIBuilder::new().init(i2c);
         let mut disp: TerminalMode<_> = Builder::new().connect(interface).into();
         disp.init().ok();
@@ -77,7 +78,7 @@ mod app {
         btn.lock(|b| b.clear_interrupt_pending_bit());
         count.lock(|c| {
             // Print letter on display
-            disp.lock(|disp| disp.write_str(core::str::from_utf8(&[*c]).unwrap()).ok());
+            disp.lock(|d| d.write_str(core::str::from_utf8(&[*c]).unwrap()).ok());
             // Wrap around
             *c = if *c < 90 { *c + 1 } else { 65 };
         });
