@@ -6,7 +6,6 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 #[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
 mod app {
     use core::fmt::Write;
-
     use ssd1306::{mode::TerminalMode, prelude::*, Builder, I2CDIBuilder};
     use stm32f4xx_hal::{
         gpio::{
@@ -23,7 +22,7 @@ mod app {
     struct Resources {
         btn: PC13<Input<PullUp>>,
         #[init(65)]
-        count: u8,
+        cnt: u8,
         disp: TerminalMode<I2CInterface<I2c<I2C1, (PB8<AlternateOD<AF4>>, PB9<AlternateOD<AF4>>)>>>,
     }
 
@@ -68,18 +67,18 @@ mod app {
         }
     }
 
-    #[task(binds = EXTI15_10, resources = [btn, count, disp])]
+    #[task(binds = EXTI15_10, resources = [btn, cnt, disp])]
     fn on_exti(ctx: on_exti::Context) {
         let on_exti::Resources {
             mut btn,
-            mut count,
+            mut cnt,
             mut disp,
         } = ctx.resources;
         btn.lock(|b| b.clear_interrupt_pending_bit());
-        count.lock(|c| {
-            // Print letter on display
+        cnt.lock(|c| {
+            // Print the letter corresponding to counter value, on the OLED display.
             disp.lock(|d| d.write_str(core::str::from_utf8(&[*c]).unwrap()).ok());
-            // Wrap around
+            // Increase the letter counter or wrap around.
             *c = if *c < 90 { *c + 1 } else { 65 };
         });
     }
