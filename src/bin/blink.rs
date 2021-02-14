@@ -44,7 +44,7 @@ mod app {
 
     #[task(resources = [led])]
     fn blink(mut ctx: blink::Context) {
-        ctx.resources.led.lock(|led| led.toggle().ok());
+        ctx.resources.led.lock(|l| l.toggle().ok());
         defmt::info!("Blink!");
         blink::schedule(ctx.scheduled + 48_000_000.cycles()).ok();
     }

@@ -1,6 +1,6 @@
 # `NUCLEO-F411RE` playground
 
-[`probe-run`] + [`defmt`] + [`flip-link`] + [`rtic`] Rust embedded project
+[`probe-run`] + [`defmt`] + [`flip-link`] + [`rtic`] Rust embedded playground
 
 [`probe-run`]: https://crates.io/crates/probe-run
 [`defmt`]: https://github.com/knurling-rs/defmt

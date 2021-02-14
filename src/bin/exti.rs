@@ -51,8 +51,8 @@ mod app {
     #[task(binds = EXTI15_10, resources = [btn, led])]
     fn on_exti(ctx: on_exti::Context) {
         let on_exti::Resources { mut btn, mut led } = ctx.resources;
-        btn.lock(|btn| btn.clear_interrupt_pending_bit());
-        led.lock(|led| led.toggle().ok());
+        btn.lock(|b| b.clear_interrupt_pending_bit());
+        led.lock(|l| l.toggle().ok());
         defmt::warn!("Button was pressed!");
     }
 }
