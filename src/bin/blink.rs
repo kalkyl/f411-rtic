@@ -1,3 +1,4 @@
+// $ cargo rb blink
 #![no_main]
 #![no_std]
 

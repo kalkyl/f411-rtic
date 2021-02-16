@@ -1,3 +1,4 @@
+// $ cargo rb i2c
 #![no_main]
 #![no_std]
 
@@ -6,7 +7,9 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 #[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
 mod app {
     use core::fmt::Write;
-    use ssd1306::{mode::TerminalMode, prelude::*, Builder, I2CDIBuilder};
+    use ssd1306::{
+        displaysize::DisplaySize128x64, mode::TerminalMode, prelude::*, Builder, I2CDIBuilder,
+    };
     use stm32f4xx_hal::{
         gpio::{
             gpiob::{PB8, PB9},
@@ -23,7 +26,10 @@ mod app {
         btn: PC13<Input<PullUp>>,
         #[init(65)]
         cnt: u8,
-        disp: TerminalMode<I2CInterface<I2c<I2C1, (PB8<AlternateOD<AF4>>, PB9<AlternateOD<AF4>>)>>>,
+        disp: TerminalMode<
+            I2CInterface<I2c<I2C1, (PB8<AlternateOD<AF4>>, PB9<AlternateOD<AF4>>)>>,
+            DisplaySize128x64,
+        >,
     }
 
     #[init]
@@ -43,7 +49,7 @@ mod app {
 
         // Configure the OLED display.
         let interface = I2CDIBuilder::new().init(i2c);
-        let mut disp: TerminalMode<_> = Builder::new().connect(interface).into();
+        let mut disp: TerminalMode<_, _> = Builder::new().connect(interface).into();
         disp.init().ok();
         disp.flush().ok();
         disp.clear().ok();

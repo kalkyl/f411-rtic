@@ -1,3 +1,4 @@
+// $ cargo rb exti
 #![no_main]
 #![no_std]
 
