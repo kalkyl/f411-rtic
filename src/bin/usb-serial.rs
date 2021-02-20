@@ -59,35 +59,33 @@ mod app {
 
     #[task(binds=OTG_FS, resources = [serial, usb_dev])]
     fn on_usb(mut ctx: on_usb::Context) {
-        let mut serial = ctx.resources.serial;
-        ctx.resources.usb_dev.lock(|usb_dev| {
-            serial.lock(|serial| {
-                if !usb_dev.poll(&mut [serial]) {
-                    return;
-                }
-                let mut buf = [0u8; 64];
-                match serial.read(&mut buf) {
-                    Ok(count) if count > 0 => {
-                        defmt::info!("Received: {:?}", core::str::from_utf8(&buf[..]).unwrap());
-                        // Echo back in upper case
-                        for c in buf[0..count].iter_mut() {
-                            if 0x61 <= *c && *c <= 0x7a {
-                                *c &= !0x20;
-                            }
-                        }
-                        let mut write_offset = 0;
-                        while write_offset < count {
-                            match serial.write(&buf[write_offset..count]) {
-                                Ok(len) if len > 0 => {
-                                    write_offset += len;
-                                }
-                                _ => {}
-                            }
+        let mut usb_dev = ctx.resources.usb_dev;
+        ctx.resources.serial.lock(|serial| {
+            if !usb_dev.lock(|u| u.poll(&mut [serial])) {
+                return;
+            }
+            let mut buf = [0u8; 64];
+            match serial.read(&mut buf) {
+                Ok(count) if count > 0 => {
+                    defmt::info!("Received: {:?}", core::str::from_utf8(&buf[..]).unwrap());
+                    // Echo back in upper case
+                    for c in buf[0..count].iter_mut() {
+                        if 0x61 <= *c && *c <= 0x7a {
+                            *c &= !0x20;
                         }
                     }
-                    _ => {}
+                    let mut write_offset = 0;
+                    while write_offset < count {
+                        match serial.write(&buf[write_offset..count]) {
+                            Ok(len) if len > 0 => {
+                                write_offset += len;
+                            }
+                            _ => {}
+                        }
+                    }
                 }
-            });
+                _ => {}
+            }
         });
     }
 }
