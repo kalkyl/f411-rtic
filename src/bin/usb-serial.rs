@@ -36,7 +36,7 @@ mod app {
             pin_dm: gpioa.pa11.into_alternate_af10(),
             pin_dp: gpioa.pa12.into_alternate_af10(),
         };
-        *USB_BUS = Some(UsbBus::new(usb, EP_MEMORY));
+        USB_BUS.replace(UsbBus::new(usb, EP_MEMORY));
 
         let serial = SerialPort::new(USB_BUS.as_ref().unwrap());
         let usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0x16c0, 0x27dd))
