@@ -1,4 +1,4 @@
-// $ cargo rb usb-serial
+// $ cargo rb usb-mouse
 #![no_main]
 #![no_std]
 
@@ -44,7 +44,7 @@ mod app {
         let hid = HIDClass::new(USB_BUS.as_ref().unwrap(), MouseReport::desc(), 60);
         let usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
             .manufacturer("Fake company")
-            .product("mouse")
+            .product("Mouse")
             .serial_number("TEST")
             .device_class(0)
             .build();
