@@ -56,29 +56,15 @@ mod app {
     #[idle(resources=[hid])]
     fn idle(mut ctx: idle::Context) -> ! {
         static mut COUNTER: u8 = 0;
-        const P: u8 = 128;
         loop {
-            ctx.resources.hid.lock(|hid| {
-                // Move mouse cursor
-                if *COUNTER < P / 2 {
-                    hid.push_input(&MouseReport {
-                        x: 3,
-                        y: 0,
-                        buttons: 0,
-                        wheel: 0,
-                    })
-                    .ok();
-                } else {
-                    hid.push_input(&MouseReport {
-                        x: -3,
-                        y: 0,
-                        buttons: 0,
-                        wheel: -0,
-                    })
-                    .ok();
-                }
-            });
-            *COUNTER = (*COUNTER + 1) % P;
+            let report = MouseReport {
+                x: if *COUNTER < 64 { 3 } else { -3 },
+                y: 0,
+                buttons: 0,
+                wheel: 0,
+            };
+            ctx.resources.hid.lock(|hid| hid.push_input(&report).ok());
+            *COUNTER = (*COUNTER + 1) % 128;
             cortex_m::asm::delay(500_000);
         }
     }
