@@ -10,7 +10,7 @@ mod app {
         otg_fs::{UsbBus, UsbBusType, USB},
         prelude::*,
     };
-    use usb_device::prelude::*;
+    use usb_device::{bus::UsbBusAllocator, prelude::*};
     use usbd_serial::SerialPort;
 
     #[resources]
@@ -22,7 +22,7 @@ mod app {
     #[init]
     fn init(ctx: init::Context) -> init::LateResources {
         static mut EP_MEMORY: [u32; 1024] = [0; 1024];
-        static mut USB_BUS: Option<usb_device::bus::UsbBusAllocator<UsbBusType>> = None;
+        static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
 
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
@@ -36,10 +36,9 @@ mod app {
             pin_dm: gpioa.pa11.into_alternate_af10(),
             pin_dp: gpioa.pa12.into_alternate_af10(),
         };
-
         *USB_BUS = Some(UsbBus::new(usb, EP_MEMORY));
 
-        let serial = usbd_serial::SerialPort::new(USB_BUS.as_ref().unwrap());
+        let serial = SerialPort::new(USB_BUS.as_ref().unwrap());
         let usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0x16c0, 0x27dd))
             .manufacturer("Fake company")
             .product("Serial port")
@@ -71,14 +70,12 @@ mod app {
                 match serial.read(&mut buf) {
                     Ok(count) if count > 0 => {
                         defmt::info!("Received: {:?}", core::str::from_utf8(&buf[..]).unwrap());
-
                         // Echo back in upper case
                         for c in buf[0..count].iter_mut() {
                             if 0x61 <= *c && *c <= 0x7a {
                                 *c &= !0x20;
                             }
                         }
-
                         let mut write_offset = 0;
                         while write_offset < count {
                             match serial.write(&buf[write_offset..count]) {
