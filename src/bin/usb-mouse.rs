@@ -7,6 +7,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 #[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
 mod app {
     use stm32f4xx_hal::{
+        gpio::{gpioc::PC13, Input, PullUp},
         otg_fs::{UsbBus, UsbBusType, USB},
         prelude::*,
     };
@@ -18,8 +19,9 @@ mod app {
 
     #[resources]
     struct Resources {
-        usb_dev: UsbDevice<'static, UsbBus<USB>>,
+        btn: PC13<Input<PullUp>>,
         hid: HIDClass<'static, UsbBusType>,
+        usb_dev: UsbDevice<'static, UsbBus<USB>>,
     }
 
     #[init]
@@ -30,6 +32,9 @@ mod app {
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
         let _clocks = rcc.cfgr.sysclk(48.mhz()).require_pll48clk().freeze();
+
+        let gpioc = ctx.device.GPIOC.split();
+        let btn = gpioc.pc13.into_pull_up_input();
 
         let gpioa = ctx.device.GPIOA.split();
         let usb = USB {
@@ -50,17 +55,21 @@ mod app {
             .build();
 
         defmt::info!("Mouse example");
-        init::LateResources { hid, usb_dev }
+        init::LateResources { btn, hid, usb_dev }
     }
 
-    #[idle(resources=[hid])]
+    #[idle(resources=[btn, hid])]
     fn idle(mut ctx: idle::Context) -> ! {
         static mut COUNTER: u8 = 0;
         loop {
+            let buttons = match ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
+                true => 1,
+                false => 0,
+            };
             let report = MouseReport {
                 x: if *COUNTER < 64 { 3 } else { -3 },
                 y: 0,
-                buttons: 0,
+                buttons,
                 wheel: 0,
             };
             ctx.resources.hid.lock(|hid| hid.push_input(&report).ok());
