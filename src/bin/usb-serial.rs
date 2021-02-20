@@ -58,10 +58,9 @@ mod app {
     }
 
     #[task(binds=OTG_FS, resources = [serial, usb_dev])]
-    fn on_usb(ctx: on_usb::Context) {
+    fn on_usb(mut ctx: on_usb::Context) {
         let mut serial = ctx.resources.serial;
-        let mut usb_dev = ctx.resources.usb_dev;
-        usb_dev.lock(|usb_dev| {
+        ctx.resources.usb_dev.lock(|usb_dev| {
             serial.lock(|serial| {
                 if !usb_dev.poll(&mut [serial]) {
                     return;
