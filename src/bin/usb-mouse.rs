@@ -80,13 +80,11 @@ mod app {
 
     #[task(binds=OTG_FS, resources = [hid, usb_dev])]
     fn on_usb(mut ctx: on_usb::Context) {
-        let mut hid = ctx.resources.hid;
-        ctx.resources.usb_dev.lock(|usb_dev| {
-            hid.lock(|hid| {
-                if !usb_dev.poll(&mut [hid]) {
-                    return;
-                }
-            });
+        let mut usb_dev = ctx.resources.usb_dev;
+        ctx.resources.hid.lock(|hid| {
+            if !usb_dev.lock(|u| u.poll(&mut [hid])) {
+                return;
+            }
         });
     }
 }
