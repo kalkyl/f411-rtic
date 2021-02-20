@@ -19,6 +19,7 @@ ssd1306 = "0.5.1"
 # ssd1306 = "0.4"
 usb-device = "0.2.5"
 usbd-serial = "0.1.0"
+usbd-hid = "0.5.0"
 
 [dependencies.stm32f4xx-hal]
 version = "0.8.3"
