@@ -23,7 +23,7 @@ mod app {
     }
 
     #[init]
-    fn init(mut ctx: init::Context) -> init::LateResources {
+    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
         // Enable SYSCFG.
         ctx.device.RCC.apb2enr.write(|w| w.syscfgen().enabled());
 
@@ -45,7 +45,7 @@ mod app {
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
 
         defmt::info!("Press button!");
-        init::LateResources { btn, pwm }
+        (init::LateResources { btn, pwm }, init::Monotonics())
     }
 
     #[idle]

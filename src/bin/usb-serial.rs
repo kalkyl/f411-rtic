@@ -20,7 +20,7 @@ mod app {
     }
 
     #[init]
-    fn init(ctx: init::Context) -> init::LateResources {
+    fn init(ctx: init::Context) -> (init::LateResources, init::Monotonics) {
         static mut EP_MEMORY: [u32; 1024] = [0; 1024];
         static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
 
@@ -47,7 +47,7 @@ mod app {
             .build();
 
         defmt::info!("Send me a string!");
-        init::LateResources { serial, usb_dev }
+        (init::LateResources { serial, usb_dev }, init::Monotonics())
     }
 
     #[idle]
@@ -67,7 +67,7 @@ mod app {
             let mut buf = [0u8; 64];
             match serial.read(&mut buf) {
                 Ok(count) if count > 0 => {
-                    defmt::info!("Received: {:?}", core::str::from_utf8(&buf[..]).unwrap());
+                    defmt::info!("Received: {}", core::str::from_utf8(&buf[..]).unwrap());
                     // Echo back in upper case
                     for c in buf[0..count].iter_mut() {
                         if 0x61 <= *c && *c <= 0x7a {
