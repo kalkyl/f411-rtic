@@ -6,10 +6,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, dispatchers = [USART1])]
 mod app {
-    use dwt_systick_monotonic::{
-        consts::{U0, U48},
-        DwtSystick,
-    };
+    use dwt_systick_monotonic::DwtSystick;
     use rtic::time::duration::Seconds;
     use stm32f4xx_hal::{
         gpio::{gpioa::PA5, Output, PushPull},
@@ -17,7 +14,7 @@ mod app {
     };
 
     #[monotonic(binds = SysTick, default = true)]
-    type MyMono = DwtSystick<U48, U0, U0>; // 48 MHz
+    type MyMono = DwtSystick<48_000_000>; // 48 MHz
 
     #[resources]
     struct Resources {
