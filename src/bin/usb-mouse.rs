@@ -31,7 +31,7 @@ mod app {
 
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
-        let _clocks = rcc.cfgr.sysclk(48.mhz()).require_pll48clk().freeze();
+        let clocks = rcc.cfgr.sysclk(48.mhz()).require_pll48clk().freeze();
 
         let gpioc = ctx.device.GPIOC.split();
         let btn = gpioc.pc13.into_pull_up_input();
@@ -43,6 +43,7 @@ mod app {
             usb_pwrclk: ctx.device.OTG_FS_PWRCLK,
             pin_dm: gpioa.pa11.into_alternate_af10(),
             pin_dp: gpioa.pa12.into_alternate_af10(),
+            hclk: clocks.hclk(),
         };
         USB_BUS.replace(UsbBus::new(usb, EP_MEMORY));
 

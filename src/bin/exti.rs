@@ -20,7 +20,7 @@ mod app {
     #[init]
     fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
         // Enable SYSCFG.
-        ctx.device.RCC.apb2enr.write(|w| w.syscfgen().enabled());
+        let mut sys_cfg = ctx.device.SYSCFG.constrain();
 
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
@@ -33,7 +33,7 @@ mod app {
         // Set up the button. On the Nucleo-F411RE it's connected to pin PC13.
         let gpioc = ctx.device.GPIOC.split();
         let mut btn = gpioc.pc13.into_pull_up_input();
-        btn.make_interrupt_source(&mut ctx.device.SYSCFG);
+        btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
 
