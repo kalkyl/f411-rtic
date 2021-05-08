@@ -23,18 +23,18 @@ mod app {
 
     #[init]
     fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
-        let mut sys_cfg = ctx.device.SYSCFG.constrain();
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
-        ctx.core.DCB.enable_trace();
-        ctx.core.DWT.enable_cycle_counter();
         
         let gpioc = ctx.device.GPIOC.split();
         let mut btn = gpioc.pc13.into_pull_up_input();
+        let mut sys_cfg = ctx.device.SYSCFG.constrain();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
-
+        
+        ctx.core.DCB.enable_trace();
+        ctx.core.DWT.enable_cycle_counter();
         let mono = DwtSystick::new(
             &mut ctx.core.DCB,
             ctx.core.DWT,
