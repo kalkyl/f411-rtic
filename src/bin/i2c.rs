@@ -16,7 +16,7 @@ mod app {
             gpioc::PC13,
             AlternateOD, Edge, ExtiPin, Input, PullUp, AF4,
         },
-        i2c::I2c,
+        i2c::{Error, I2c},
         prelude::*,
         stm32::I2C1,
     };
@@ -43,17 +43,69 @@ mod app {
 
         // Set up I2C.
         let gpiob = ctx.device.GPIOB.split();
-        let scl = gpiob.pb8.into_alternate_af4().set_open_drain();
-        let sda = gpiob.pb9.into_alternate_af4().set_open_drain();
-        let i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), clocks);
+        let mut scl = gpiob.pb8.into_alternate_af4_open_drain();
+        let mut sda = gpiob.pb9.into_alternate_af4_open_drain();
+        scl.internal_pull_up(true);
+        sda.internal_pull_up(true);
+        let mut i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), clocks);
+
+        let res = i2c.write(0x00, &[1]);
+        match res {
+            Err(e) => match e {
+                Error::NACK => defmt::error!("NACK"),
+                Error::TIMEOUT => defmt::error!("TIMEOUT"),
+                Error::ARBITRATION => defmt::error!("ARB"),
+                _ => defmt::error!("OTHER"),
+            },
+            _ => (),
+        }
+
+        let res = i2c.write(0x00, &[1]);
+        match res {
+            Err(e) => match e {
+                Error::NACK => defmt::error!("NACK"),
+                Error::TIMEOUT => defmt::error!("TIMEOUT"),
+                Error::ARBITRATION => defmt::error!("ARB"),
+                _ => defmt::error!("OTHER"),
+            },
+            _ => (),
+        }
+
+        let res = i2c.write(0x00, &[1]);
+        match res {
+            Err(e) => match e {
+                Error::NACK => defmt::error!("NACK"),
+                Error::TIMEOUT => defmt::error!("TIMEOUT"),
+                Error::ARBITRATION => defmt::error!("ARB"),
+                _ => defmt::error!("OTHER"),
+            },
+            _ => (),
+        }
+
+        let res = i2c.write(0x00, &[1]);
+        match res {
+            Err(e) => match e {
+                Error::NACK => defmt::error!("NACK"),
+                Error::TIMEOUT => defmt::error!("TIMEOUT"),
+                Error::ARBITRATION => defmt::error!("ARB"),
+                _ => defmt::error!("OTHER"),
+            },
+            _ => (),
+        }
 
         // Configure the OLED display.
         let interface = I2CDIBuilder::new().init(i2c);
         let mut disp: TerminalMode<_, _> = Builder::new().connect(interface).into();
-        disp.init().ok();
-        disp.flush().ok();
-        disp.clear().ok();
-        disp.write_str("Hello world!\n").ok();
+        // let res = disp.init();
+        // match res {
+        //     Err(ssd1306::mode::terminal::TerminalModeError::InterfaceError(e)) => {
+        //         defmt::info!("Interface")
+        //     }
+        //     _ => (),
+        // }
+        // disp.flush().ok();
+        // disp.clear().ok();
+        // disp.write_str("Hello world!\n").ok();
 
         // Set up the button. On the Nucleo-F411RE it's connected to pin PC13.
         let gpioc = ctx.device.GPIOC.split();
