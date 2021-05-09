@@ -58,16 +58,16 @@ mod app {
         ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
         debounce::spawn_after(Milliseconds(30_u32)).ok();
     }
-    
+     
     #[task(resources = [btn])]
     fn debounce(mut ctx: debounce::Context){
         static mut HOLD: Option<hold::MyMono::SpawnHandle> = None;
         ctx.resources.btn.lock(|b| if b.is_low().unwrap() {
             defmt::info!("Button was pressed!");
-            if let Some(handle) = HOLD.take() {
-                handle.cancel().ok();
-            }
-            *HOLD = hold::MyMono::spawn_after(Seconds(1_u32)).ok();
+            *HOLD = match HOLD.take() {
+                Some(handle) => handle.reschedule_after(Seconds(1_u32)).ok(),
+                None => hold::MyMono::spawn_after(Seconds(1_u32)).ok()
+            };
         });
     }
 
