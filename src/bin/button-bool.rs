@@ -1,4 +1,4 @@
-// $ cargo rb button
+// $ cargo rb button-bool
 #![no_main]
 #![no_std]
 
