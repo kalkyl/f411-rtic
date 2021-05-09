@@ -61,7 +61,7 @@ mod app {
      
     #[task(resources = [btn])]
     fn debounce(mut ctx: debounce::Context){
-        static mut HOLD: Option<hold::MyMono::SpawnHandle> = None;
+        static mut HOLD: Option<hold::SpawnHandle> = None;
         ctx.resources.btn.lock(|b| if b.is_low().unwrap() {
             defmt::info!("Button was pressed!");
             *HOLD = match HOLD.take() {
