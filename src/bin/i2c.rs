@@ -24,8 +24,6 @@ mod app {
     #[resources]
     struct Resources {
         btn: PC13<Input<PullUp>>,
-        #[init(65)]
-        cnt: u8,
         disp: TerminalMode<
             I2CInterface<I2c<I2C1, (PB8<AlternateOD<AF4>>, PB9<AlternateOD<AF4>>)>>,
             DisplaySize128x64,
@@ -75,19 +73,15 @@ mod app {
         }
     }
 
-    #[task(binds = EXTI15_10, resources = [btn, cnt, disp])]
-    fn on_exti(ctx: on_exti::Context) {
-        let on_exti::Resources {
-            mut btn,
-            mut cnt,
-            mut disp,
-        } = ctx.resources;
-        btn.lock(|b| b.clear_interrupt_pending_bit());
-        cnt.lock(|c| {
+    #[task(binds = EXTI15_10, resources = [btn, disp])]
+    fn on_exti(mut ctx: on_exti::Context) {
+        static mut CNT: u8 = 65;
+        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.resources.disp.lock(|disp| {
             // Print the letter corresponding to counter value, on the OLED display.
-            disp.lock(|d| d.write_str(core::str::from_utf8(&[*c]).unwrap()).ok());
+            disp.write_str(core::str::from_utf8(&[*CNT]).unwrap()).ok();
             // Increase the letter counter or wrap around.
-            *c = if *c < 90 { *c + 1 } else { 65 };
+            *CNT = if *CNT < 90 { *CNT + 1 } else { 65 };
         });
     }
 }
