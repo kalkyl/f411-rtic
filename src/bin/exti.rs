@@ -19,9 +19,6 @@ mod app {
 
     #[init]
     fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
-        // Enable SYSCFG.
-        let mut sys_cfg = ctx.device.SYSCFG.constrain();
-
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
         let _clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
@@ -33,12 +30,12 @@ mod app {
         // Set up the button. On the Nucleo-F411RE it's connected to pin PC13.
         let gpioc = ctx.device.GPIOC.split();
         let mut btn = gpioc.pc13.into_pull_up_input();
+        let mut sys_cfg = ctx.device.SYSCFG.constrain();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
 
         defmt::info!("Press button!");
-
         (init::LateResources { btn, led }, init::Monotonics())
     }
 
@@ -50,10 +47,9 @@ mod app {
     }
 
     #[task(binds = EXTI15_10, resources = [btn, led])]
-    fn on_exti(ctx: on_exti::Context) {
-        let on_exti::Resources { mut btn, mut led } = ctx.resources;
-        btn.lock(|b| b.clear_interrupt_pending_bit());
-        led.lock(|l| l.toggle().ok());
+    fn on_exti(mut ctx: on_exti::Context) {
+        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.resources.led.lock(|l| l.toggle().ok());
         defmt::warn!("Button was pressed!");
     }
 }
