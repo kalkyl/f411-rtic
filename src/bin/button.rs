@@ -62,23 +62,19 @@ mod app {
     #[task(resources = [btn])]
     fn debounce(mut ctx: debounce::Context) {
         static mut HOLD: Option<hold::SpawnHandle> = None;
-        ctx.resources.btn.lock(|btn| {
-            if btn.is_low().unwrap() {
-                defmt::info!("Button was pressed!");
-                *HOLD = match HOLD.take() {
-                    Some(handle) => handle.reschedule_after(Seconds(1_u32)).ok(),
-                    None => hold::spawn_after(Seconds(1_u32)).ok(),
-                };
-            }
-        });
+        if ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
+            defmt::info!("Button was pressed!");
+            *HOLD = match HOLD.take() {
+                Some(handle) => handle.reschedule_after(Seconds(1_u32)).ok(),
+                None => hold::spawn_after(Seconds(1_u32)).ok(),
+            };
+        }
     }
 
     #[task(resources = [btn])]
     fn hold(mut ctx: hold::Context) {
-        ctx.resources.btn.lock(|btn| {
-            if btn.is_low().unwrap() {
-                defmt::info!("Long press...");
-            }
-        });
+        if ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
+            defmt::info!("Long press...");
+        }
     }
 }
