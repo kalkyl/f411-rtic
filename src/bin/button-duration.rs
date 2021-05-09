@@ -71,15 +71,14 @@ mod app {
             PRESSED_AT.replace(monotonics::MyMono::now());
             *HOLD = hold::spawn_after(Milliseconds(1000_u32)).ok();
         } else {
-            if let Some(pressed_at) = PRESSED_AT.take() {
-                if monotonics::MyMono::now()
-                    .checked_duration_since(&pressed_at)
-                    .and_then(|d| d.try_into().ok())
-                    .map(|t: Milliseconds<u32>| t < Milliseconds(1000_u32))
-                    .unwrap_or(false)
-                {
-                    defmt::info!("Short press")
-                }
+            if PRESSED_AT
+                .take()
+                .and_then(|i| monotonics::MyMono::now().checked_duration_since(&i))
+                .and_then(|d| d.try_into().ok())
+                .map(|t: Milliseconds<u32>| t < Milliseconds(1000_u32))
+                .unwrap_or(false)
+            {
+                defmt::info!("Short press")
             }
         }
     }
