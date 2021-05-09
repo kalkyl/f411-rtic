@@ -56,20 +56,12 @@ mod app {
     }
 
     #[task(binds = EXTI15_10, resources = [btn, level, pwm])]
-    fn on_exti(ctx: on_exti::Context) {
-        let on_exti::Resources {
-            mut btn,
-            mut level,
-            mut pwm,
-        } = ctx.resources;
-        btn.lock(|b| b.clear_interrupt_pending_bit());
-        pwm.lock(|p| {
-            let max_duty = p.get_max_duty();
-            level.lock(|l| {
-                p.set_duty(max_duty / *l);
-                defmt::info!("Duty = {:?}/{:?}", max_duty, *l);
-                *l = if *l < 2048 { (*l) * 2 } else { 1 };
-            })
+    fn on_exti(mut ctx: on_exti::Context) {
+        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        (ctx.resources.level, ctx.resources.pwm).lock(|level, pwm| {
+            defmt::info!("Duty = {:?}/{:?}", pwm.get_max_duty(), *level);
+            pwm.set_duty(pwm.get_max_duty() / *level);
+            *level = if *level < 2048 { (*level) * 2 } else { 1 };
         });
     }
 }
