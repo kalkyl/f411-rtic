@@ -73,9 +73,9 @@ mod app {
                 *HOLD = hold::spawn_after(Seconds(1_u32)).ok();
             } else {
                 if *pressed {
+                    *pressed = false;
                     defmt::info!("Short press");
                 }
-                *pressed = false;
             }
         });
     }
