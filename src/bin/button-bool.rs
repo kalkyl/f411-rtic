@@ -81,10 +81,12 @@ mod app {
     }
 
     #[task(resources = [btn, was_pressed])]
-    fn hold(mut ctx: hold::Context) {
-        ctx.resources.was_pressed.lock(|p| *p = false);
-        if ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
-            defmt::info!("Long press");
-        }
+    fn hold(ctx: hold::Context) {
+        (ctx.resources.btn, ctx.resources.was_pressed).lock(|btn, was_pressed| {
+            if btn.is_low().unwrap() {
+                *was_pressed = false;
+                defmt::info!("Long press");
+            }
+        });
     }
 }
