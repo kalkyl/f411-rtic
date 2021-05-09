@@ -66,7 +66,7 @@ mod app {
             defmt::info!("Button was pressed!");
             *HOLD = match HOLD.take() {
                 Some(handle) => handle.reschedule_after(Seconds(1_u32)).ok(),
-                None => hold::MyMono::spawn_after(Seconds(1_u32)).ok()
+                None => hold::spawn_after(Seconds(1_u32)).ok()
             };
         });
     }
