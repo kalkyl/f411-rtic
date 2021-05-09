@@ -77,11 +77,11 @@ mod app {
     fn on_exti(mut ctx: on_exti::Context) {
         static mut CNT: u8 = 65;
         ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        // Print the letter corresponding to counter value on the OLED display.
         ctx.resources.disp.lock(|disp| {
-            // Print the letter corresponding to counter value, on the OLED display.
             disp.write_str(core::str::from_utf8(&[*CNT]).unwrap()).ok();
-            // Increase the letter counter or wrap around.
-            *CNT = if *CNT < 90 { *CNT + 1 } else { 65 };
         });
+        // Increase counter to next letter or wrap around
+        *CNT = if *CNT < 90 { *CNT + 1 } else { 65 };
     }
 }
