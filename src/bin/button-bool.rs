@@ -20,7 +20,7 @@ mod app {
     struct Resources {
         btn: PC13<Input<PullUp>>,
         #[init(false)]
-        pressed: bool,
+        was_pressed: bool,
     }
 
     #[init]
@@ -61,28 +61,28 @@ mod app {
         debounce::spawn_after(Milliseconds(30_u32)).ok();
     }
 
-    #[task(resources = [btn, pressed])]
+    #[task(resources = [btn, was_pressed])]
     fn debounce(ctx: debounce::Context) {
         static mut HOLD: Option<hold::SpawnHandle> = None;
         if let Some(handle) = HOLD.take() {
             handle.cancel().ok();
         }
-        (ctx.resources.btn, ctx.resources.pressed).lock(|btn, pressed| {
+        (ctx.resources.btn, ctx.resources.was_pressed).lock(|btn, was_pressed| {
             if btn.is_low().unwrap() {
-                *pressed = true;
+                *was_pressed = true;
                 *HOLD = hold::spawn_after(Seconds(1_u32)).ok();
             } else {
-                if *pressed {
-                    *pressed = false;
+                if *was_pressed {
+                    *was_pressed = false;
                     defmt::info!("Short press");
                 }
             }
         });
     }
 
-    #[task(resources = [btn, pressed])]
+    #[task(resources = [btn, was_pressed])]
     fn hold(mut ctx: hold::Context) {
-        ctx.resources.pressed.lock(|p| *p = false);
+        ctx.resources.was_pressed.lock(|p| *p = false);
         if ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
             defmt::info!("Long press");
         }
