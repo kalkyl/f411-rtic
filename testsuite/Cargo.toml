@@ -10,6 +10,10 @@ version = "0.1.0"
 name = "gpio"
 harness = false
 
+[[test]]
+name = "other"
+harness = false
+
 [dependencies]
 f411-rtic = { path = ".." }
 cortex-m = "0.6.3"
