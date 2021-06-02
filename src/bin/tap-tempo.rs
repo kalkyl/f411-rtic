@@ -83,8 +83,8 @@ mod app {
                     let diff: Option<Milliseconds> = monotonics::MyMono::now()
                         .checked_duration_since(&instant)
                         .and_then(|d| d.try_into().ok());
-                    if let Some(t) = diff {
-                        *ms = t.0;
+                    if let Some(Milliseconds(t)) = diff {
+                        *ms = t;
                         defmt::info!("{} bpm", 60_000 / *ms);
                     }
                 }
