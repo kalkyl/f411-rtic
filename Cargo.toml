@@ -22,6 +22,7 @@ usbd-serial = "0.1.0"
 usbd-hid = "0.5.0"
 embedded-hal = "0.2.4"
 dwt-systick-monotonic = "0.1.0-alpha.0"
+rtic-monotonic = "0.1.0-alpha.1"
 
 [dependencies.stm32f4xx-hal]
 version = "0.9.0"
