@@ -8,11 +8,11 @@ version = "0.1.0"
 members = ["testsuite"]
 
 [dependencies]
-cortex-m = "0.6.4"
+cortex-m = "0.7"
 # cortex-m-rt = "0.6.13"
 # cortex-m-rtic = "0.5.5"
-cortex-m-rtic = "0.6.0-alpha.2"
-defmt = "0.2.0"
+cortex-m-rtic = "0.6.0-alpha.4"
+defmt = "0.2.3"
 defmt-rtt = "0.2.0"
 panic-probe = { version = "0.2.0", features = ["print-defmt"] }
 ssd1306 = "0.5.1"
