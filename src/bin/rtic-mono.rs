@@ -65,7 +65,7 @@ impl<const FREQ: u32> MonoTimer<FREQ> {
         rcc.apb1enr.modify(|_, w| w.tim2en().set_bit());
         rcc.apb1rstr.modify(|_, w| w.tim2rst().set_bit());
         rcc.apb1rstr.modify(|_, w| w.tim2rst().clear_bit());
-        let psc = clocks.pclk1().0 / FREQ - 1;
+        let psc = clocks.hclk().0 / FREQ - 1;
         timer.psc.write(|w| w.psc().bits(psc as u16));
         timer.arr.write(|w| unsafe { w.bits(u32::MAX) });
         timer.egr.write(|w| w.ug().set_bit());
