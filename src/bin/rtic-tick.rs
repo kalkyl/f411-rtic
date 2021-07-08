@@ -9,10 +9,10 @@ mod mono; // monotonic timer impl for TIM2
 mod app {
     use super::mono::MonoTimer;
     use rtic::time::duration::Seconds;
-    use stm32f4xx_hal::prelude::*;
+    use stm32f4xx_hal::{pac, prelude::*};
 
     #[monotonic(binds = TIM2, default = true)]
-    type MyMono = MonoTimer<48_000_000>;
+    type MyMono = MonoTimer<pac::TIM2, 48_000_000>;
 
     #[init]
     fn init(ctx: init::Context) -> (init::LateResources, init::Monotonics) {
