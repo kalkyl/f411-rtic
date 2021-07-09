@@ -21,8 +21,11 @@ mod app {
         stm32::I2C1,
     };
 
-    #[resources]
-    struct Resources {
+    #[shared]
+    struct Shared {}
+
+    #[local]
+    struct Local {
         btn: PC13<Input<PullUp>>,
         disp: TerminalMode<
             I2CInterface<I2c<I2C1, (PB8<AlternateOD<AF4>>, PB9<AlternateOD<AF4>>)>>,
@@ -31,7 +34,7 @@ mod app {
     }
 
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         // Enable SYSCFG.
         let mut sys_cfg = ctx.device.SYSCFG.constrain();
 
@@ -63,25 +66,24 @@ mod app {
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
 
         defmt::info!("Press button!");
-        (init::LateResources { btn, disp }, init::Monotonics())
+        (Shared {}, Local { btn, disp }, init::Monotonics())
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(binds = EXTI15_10, resources = [btn, disp])]
-    fn on_exti(mut ctx: on_exti::Context) {
-        static mut CNT: u8 = 65;
-        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+    #[task(binds = EXTI15_10, local = [btn, disp, cnt: u8 = 65])]
+    fn on_exti(ctx: on_exti::Context) {
+        let cnt = ctx.local.cnt;
+        ctx.local.btn.clear_interrupt_pending_bit();
         // Print the letter corresponding to counter value on the OLED display.
-        ctx.resources.disp.lock(|disp| {
-            disp.write_str(core::str::from_utf8(&[*CNT]).unwrap()).ok();
-        });
+        ctx.local
+            .disp
+            .write_str(core::str::from_utf8(&[*cnt]).unwrap())
+            .ok();
         // Increase counter to next letter or wrap around
-        *CNT = if *CNT < 90 { *CNT + 1 } else { 65 };
+        *cnt = if *cnt < 90 { *cnt + 1 } else { 65 };
     }
 }

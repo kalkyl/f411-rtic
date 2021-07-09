@@ -11,14 +11,17 @@ mod app {
         prelude::*,
     };
 
-    #[resources]
-    struct Resources {
+    #[shared]
+    struct Shared {}
+
+    #[local]
+    struct Local {
         led: PA5<Output<PushPull>>,
         btn: PC13<Input<PullUp>>,
     }
 
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
         let _clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
@@ -36,20 +39,18 @@ mod app {
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
 
         defmt::info!("Press button!");
-        (init::LateResources { btn, led }, init::Monotonics())
+        (Shared {}, Local { btn, led }, init::Monotonics())
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(binds = EXTI15_10, resources = [btn, led])]
-    fn on_exti(mut ctx: on_exti::Context) {
-        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
-        ctx.resources.led.lock(|l| l.toggle().ok());
+    #[task(binds = EXTI15_10, local = [btn, led])]
+    fn on_exti(ctx: on_exti::Context) {
+        ctx.local.btn.clear_interrupt_pending_bit();
+        ctx.local.led.toggle().ok();
         defmt::warn!("Button was pressed!");
     }
 }

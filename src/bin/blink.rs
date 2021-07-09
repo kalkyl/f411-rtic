@@ -16,13 +16,16 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<48_000_000>; // 48 MHz
 
-    #[resources]
-    struct Resources {
+    #[shared]
+    struct Shared {}
+
+    #[local]
+    struct Local {
         led: PA5<Output<PushPull>>,
     }
 
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         ctx.core.DCB.enable_trace();
         ctx.core.DWT.enable_cycle_counter();
 
@@ -43,19 +46,17 @@ mod app {
 
         defmt::info!("Hello world!");
         blink::spawn_after(Seconds(1_u32)).ok();
-        (init::LateResources { led }, init::Monotonics(mono))
+        (Shared {}, Local { led }, init::Monotonics(mono))
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(resources = [led])]
-    fn blink(mut ctx: blink::Context) {
-        ctx.resources.led.lock(|l| l.toggle().ok());
+    #[task(local = [led])]
+    fn blink(ctx: blink::Context) {
+        ctx.local.led.toggle().ok();
         defmt::info!("Blink!");
         blink::spawn_after(Seconds(1_u32)).ok();
     }

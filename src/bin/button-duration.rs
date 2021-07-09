@@ -17,13 +17,16 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<48_000_000>; // 48 MHz
 
-    #[resources]
-    struct Resources {
+    #[shared]
+    struct Shared {
         btn: PC13<Input<PullUp>>,
     }
 
+    #[local]
+    struct Local {}
+
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
 
@@ -44,34 +47,32 @@ mod app {
         );
 
         defmt::info!("Press or hold the button!");
-        (init::LateResources { btn }, init::Monotonics(mono))
+        (Shared { btn }, Local {}, init::Monotonics(mono))
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(binds = EXTI15_10, resources = [btn])]
+    #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
         debounce::spawn_after(Milliseconds(30_u32)).ok();
     }
 
-    #[task(resources = [btn])]
+    #[task(shared = [btn], local =[hold: Option<hold::SpawnHandle> = None, pressed_at: Option<Instant<MyMono>> = None])]
     fn debounce(mut ctx: debounce::Context) {
-        static mut HOLD: Option<hold::SpawnHandle> = None;
-        static mut PRESSED_AT: Option<Instant<MyMono>> = None;
-        if let Some(handle) = HOLD.take() {
+        if let Some(handle) = ctx.local.hold.take() {
             handle.cancel().ok();
         }
-        if ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
-            PRESSED_AT.replace(monotonics::MyMono::now());
-            *HOLD = hold::spawn_after(Milliseconds(1000_u32)).ok();
+        if ctx.shared.btn.lock(|b| b.is_low().unwrap()) {
+            ctx.local.pressed_at.replace(monotonics::MyMono::now());
+            *ctx.local.hold = hold::spawn_after(Milliseconds(1000_u32)).ok();
         } else {
-            if PRESSED_AT
+            if ctx
+                .local
+                .pressed_at
                 .take()
                 .and_then(|i| monotonics::MyMono::now().checked_duration_since(&i))
                 .and_then(|d| d.try_into().ok())
@@ -83,9 +84,9 @@ mod app {
         }
     }
 
-    #[task(resources = [btn])]
+    #[task(shared = [btn])]
     fn hold(mut ctx: hold::Context) {
-        if ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
+        if ctx.shared.btn.lock(|b| b.is_low().unwrap()) {
             defmt::info!("Long press");
         }
     }

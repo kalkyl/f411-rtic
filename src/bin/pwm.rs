@@ -14,16 +14,17 @@ mod app {
         stm32::TIM2,
     };
 
-    #[resources]
-    struct Resources {
+    #[shared]
+    struct Shared {}
+
+    #[local]
+    struct Local {
         btn: PC13<Input<PullUp>>,
-        #[init(1)]
-        level: u16,
         pwm: PwmChannels<TIM2, C1>,
     }
 
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         // Enable SYSCFG.
         let mut sys_cfg = ctx.device.SYSCFG.constrain();
 
@@ -45,23 +46,20 @@ mod app {
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
 
         defmt::info!("Press button!");
-        (init::LateResources { btn, pwm }, init::Monotonics())
+        (Shared {}, Local { btn, pwm }, init::Monotonics())
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(binds = EXTI15_10, resources = [btn, level, pwm])]
-    fn on_exti(mut ctx: on_exti::Context) {
-        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
-        (ctx.resources.level, ctx.resources.pwm).lock(|level, pwm| {
-            defmt::info!("Duty = {:?}/{:?}", pwm.get_max_duty(), *level);
-            pwm.set_duty(pwm.get_max_duty() / *level);
-            *level = if *level < 2048 { (*level) * 2 } else { 1 };
-        });
+    #[task(binds = EXTI15_10, local = [btn, pwm, level: u16 = 1])]
+    fn on_exti(ctx: on_exti::Context) {
+        ctx.local.btn.clear_interrupt_pending_bit();
+        let (level, pwm) = (ctx.local.level, ctx.local.pwm);
+        defmt::info!("Duty = {:?}/{:?}", pwm.get_max_duty(), *level);
+        pwm.set_duty(pwm.get_max_duty() / *level);
+        *level = if *level < 2048 { (*level) * 2 } else { 1 };
     }
 }

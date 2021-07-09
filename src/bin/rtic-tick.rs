@@ -11,16 +11,22 @@ mod app {
     use rtic::time::duration::Seconds;
     use stm32f4xx_hal::{pac, prelude::*};
 
+    #[shared]
+    struct Shared {}
+
+    #[local]
+    struct Local {}
+
     #[monotonic(binds = TIM2, default = true)]
     type MyMono = MonoTimer<pac::TIM2, 48_000_000>;
 
     #[init]
-    fn init(ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
         let mono = MyMono::new(ctx.device.TIM2, &clocks);
         tick::spawn().ok();
-        (init::LateResources {}, init::Monotonics(mono))
+        (Shared {}, Local {}, init::Monotonics(mono))
     }
 
     #[idle]

@@ -17,18 +17,19 @@ mod app {
         hid_class::HIDClass,
     };
 
-    #[resources]
-    struct Resources {
-        btn: PC13<Input<PullUp>>,
+    #[shared]
+    struct Shared {
         hid: HIDClass<'static, UsbBusType>,
+    }
+
+    #[local]
+    struct Local {
+        btn: PC13<Input<PullUp>>,
         usb_dev: UsbDevice<'static, UsbBus<USB>>,
     }
 
-    #[init]
-    fn init(ctx: init::Context) -> (init::LateResources, init::Monotonics) {
-        static mut EP_MEMORY: [u32; 1024] = [0; 1024];
-        static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
-
+    #[init(local = [ep_memory: [u32; 1024] = [0; 1024], usb_bus: Option<UsbBusAllocator<UsbBusType>> = None])]
+    fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).require_pll48clk().freeze();
@@ -45,10 +46,12 @@ mod app {
             pin_dp: gpioa.pa12.into_alternate_af10(),
             hclk: clocks.hclk(),
         };
-        USB_BUS.replace(UsbBus::new(usb, EP_MEMORY));
 
-        let hid = HIDClass::new(USB_BUS.as_ref().unwrap(), MouseReport::desc(), 60);
-        let usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
+        let usb_bus = ctx.local.usb_bus;
+        usb_bus.replace(UsbBus::new(usb, ctx.local.ep_memory));
+
+        let hid = HIDClass::new(usb_bus.as_ref().unwrap(), MouseReport::desc(), 60);
+        let usb_dev = UsbDeviceBuilder::new(usb_bus.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
             .manufacturer("Fake company")
             .product("Mouse")
             .serial_number("TEST")
@@ -56,35 +59,33 @@ mod app {
             .build();
 
         defmt::info!("Mouse example");
-        (
-            init::LateResources { btn, hid, usb_dev },
-            init::Monotonics(),
-        )
+        (Shared { hid }, Local { btn, usb_dev }, init::Monotonics())
     }
 
-    #[idle(resources=[btn, hid])]
+    #[idle(shared = [hid], local=[btn, counter: u8 = 0])]
     fn idle(mut ctx: idle::Context) -> ! {
-        static mut COUNTER: u8 = 0;
+        let counter = ctx.local.counter;
         loop {
-            let buttons = match ctx.resources.btn.lock(|b| b.is_low().unwrap()) {
+            let buttons = match ctx.local.btn.is_low().unwrap() {
                 true => 1,
                 false => 0,
             };
             let report = MouseReport {
-                x: if *COUNTER < 64 { 3 } else { -3 },
+                x: if *counter < 64 { 3 } else { -3 },
                 y: 0,
                 buttons,
                 wheel: 0,
             };
-            ctx.resources.hid.lock(|hid| hid.push_input(&report).ok());
-            *COUNTER = (*COUNTER + 1) % 128;
+            ctx.shared.hid.lock(|hid| hid.push_input(&report).ok());
+            *counter = (*counter + 1) % 128;
             cortex_m::asm::delay(500_000);
         }
     }
 
-    #[task(binds=OTG_FS, resources = [hid, usb_dev])]
-    fn on_usb(ctx: on_usb::Context) {
-        (ctx.resources.hid, ctx.resources.usb_dev).lock(|hid, usb_dev| {
+    #[task(binds=OTG_FS, shared = [hid], local=[usb_dev])]
+    fn on_usb(mut ctx: on_usb::Context) {
+        let usb_dev = ctx.local.usb_dev;
+        ctx.shared.hid.lock(|hid| {
             if !usb_dev.poll(&mut [hid]) {
                 return;
             }

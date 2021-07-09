@@ -16,15 +16,17 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<48_000_000>; // 48 MHz
 
-    #[resources]
-    struct Resources {
-        btn: PC13<Input<PullUp>>,
-        #[init(false)]
+    #[shared]
+    struct Shared {
         was_pressed: bool,
+        btn: PC13<Input<PullUp>>,
     }
 
+    #[local]
+    struct Local {}
+
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
 
@@ -45,32 +47,37 @@ mod app {
         );
 
         defmt::info!("Press the button!");
-        (init::LateResources { btn }, init::Monotonics(mono))
+        (
+            Shared {
+                btn,
+                was_pressed: false,
+            },
+            Local {},
+            init::Monotonics(mono),
+        )
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(binds = EXTI15_10, resources = [btn])]
+    #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
         debounce::spawn_after(Milliseconds(30_u32)).ok();
     }
 
-    #[task(resources = [btn, was_pressed])]
+    #[task(shared = [btn, was_pressed], local = [hold: Option<hold::SpawnHandle> = None])]
     fn debounce(ctx: debounce::Context) {
-        static mut HOLD: Option<hold::SpawnHandle> = None;
-        if let Some(handle) = HOLD.take() {
+        let hold = ctx.local.hold;
+        if let Some(handle) = hold.take() {
             handle.cancel().ok();
         }
-        (ctx.resources.btn, ctx.resources.was_pressed).lock(|btn, was_pressed| {
+        (ctx.shared.btn, ctx.shared.was_pressed).lock(|btn, was_pressed| {
             if btn.is_low().unwrap() {
                 *was_pressed = true;
-                *HOLD = hold::spawn_after(Seconds(1_u32)).ok();
+                *hold = hold::spawn_after(Seconds(1_u32)).ok();
             } else {
                 if *was_pressed {
                     *was_pressed = false;
@@ -80,9 +87,9 @@ mod app {
         });
     }
 
-    #[task(resources = [btn, was_pressed])]
+    #[task(shared = [btn, was_pressed])]
     fn hold(ctx: hold::Context) {
-        (ctx.resources.btn, ctx.resources.was_pressed).lock(|btn, was_pressed| {
+        (ctx.shared.btn, ctx.shared.was_pressed).lock(|btn, was_pressed| {
             if btn.is_low().unwrap() {
                 *was_pressed = false;
                 defmt::info!("Long press");

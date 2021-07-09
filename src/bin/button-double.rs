@@ -16,15 +16,17 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<48_000_000>; // 48 MHz
 
-    #[resources]
-    struct Resources {
+    #[shared]
+    struct Shared {
         btn: PC13<Input<PullUp>>,
-        #[init(0)]
         count: u8,
     }
 
+    #[local]
+    struct Local {}
+
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
 
@@ -45,30 +47,27 @@ mod app {
         );
 
         defmt::info!("Press the button!");
-        (init::LateResources { btn }, init::Monotonics(mono))
+        (Shared { btn, count: 0 }, Local {}, init::Monotonics(mono))
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(binds = EXTI15_10, resources = [btn])]
+    #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
         debounce::spawn_after(Milliseconds(30_u32)).ok();
     }
 
-    #[task(resources = [btn, count])]
+    #[task(shared = [btn, count], local = [clear: Option<clear::SpawnHandle> = None])]
     fn debounce(ctx: debounce::Context) {
-        static mut CLEAR: Option<clear::SpawnHandle> = None;
-        if let Some(handle) = CLEAR.take() {
+        if let Some(handle) = ctx.local.clear.take() {
             handle.cancel().ok();
         }
-        *CLEAR = clear::spawn_after(Milliseconds(200_u32)).ok();
-        (ctx.resources.btn, ctx.resources.count).lock(|btn, count| {
+        *ctx.local.clear = clear::spawn_after(Milliseconds(200_u32)).ok();
+        (ctx.shared.btn, ctx.shared.count).lock(|btn, count| {
             if btn.is_low().unwrap() {
                 match *count > 0 {
                     true => {
@@ -82,8 +81,8 @@ mod app {
         });
     }
 
-    #[task(resources = [count])]
+    #[task(shared = [count])]
     fn clear(mut ctx: clear::Context) {
-        ctx.resources.count.lock(|c| *c = 0);
+        ctx.shared.count.lock(|c| *c = 0);
     }
 }

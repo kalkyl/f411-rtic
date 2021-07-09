@@ -17,19 +17,20 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<48_000_000>; // 48 MHz
 
-    #[resources]
-    struct Resources {
+    #[shared]
+    struct Shared {
         btn: PC13<Input<PullUp>>,
-        led: PA5<Output<PushPull>>,
-
-        #[init(None)]
         pressed: Option<Instant<MyMono>>,
-        #[init(500)]
         ms: u32,
     }
 
+    #[local]
+    struct Local {
+        led: PA5<Output<PushPull>>,
+    }
+
     #[init]
-    fn init(mut ctx: init::Context) -> (init::LateResources, init::Monotonics) {
+    fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
 
@@ -54,30 +55,34 @@ mod app {
 
         defmt::info!("Tap the button!");
         blink::spawn().ok();
-        (init::LateResources { btn, led }, init::Monotonics(mono))
+        (
+            Shared {
+                btn,
+                pressed: None,
+                ms: 500,
+            },
+            Local { led },
+            init::Monotonics(mono),
+        )
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {
-            cortex_m::asm::nop();
-        }
+        loop {}
     }
 
-    #[task(binds = EXTI15_10, resources = [btn])]
+    #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.resources.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
         debounce::spawn_after(Milliseconds(30_u32)).ok();
     }
 
-    #[task(resources = [btn, pressed, ms])]
+    #[task(shared = [btn, ms, pressed], local = [clear: Option<clear::SpawnHandle> = None])]
     fn debounce(ctx: debounce::Context) {
-        static mut CLEAR: Option<clear::SpawnHandle> = None;
-        let debounce::Resources { btn, pressed, ms } = ctx.resources;
-        if let Some(handle) = CLEAR.take() {
+        if let Some(handle) = ctx.local.clear.take() {
             handle.cancel().ok();
         }
-        (btn, pressed, ms).lock(|btn, pressed, ms| {
+        (ctx.shared.btn, ctx.shared.pressed, ctx.shared.ms).lock(|btn, pressed, ms| {
             if btn.is_low().unwrap() {
                 if let Some(instant) = pressed.take() {
                     let diff: Option<Milliseconds> = monotonics::MyMono::now()
@@ -91,19 +96,19 @@ mod app {
                 pressed.replace(monotonics::MyMono::now());
             }
         });
-        *CLEAR = clear::spawn_after(Milliseconds(2000_u32)).ok();
+        *ctx.local.clear = clear::spawn_after(Milliseconds(2000_u32)).ok();
     }
 
-    #[task(resources = [pressed])]
+    #[task(shared = [pressed])]
     fn clear(mut ctx: clear::Context) {
-        ctx.resources.pressed.lock(|i| i.take());
+        ctx.shared.pressed.lock(|i| i.take());
     }
 
-    #[task(resources = [led, ms])]
+    #[task(shared = [ms], local = [led])]
     fn blink(mut ctx: blink::Context) {
-        blink::spawn_after(Milliseconds(ctx.resources.ms.lock(|t| *t))).ok();
-        ctx.resources.led.lock(|l| l.set_high().ok());
+        blink::spawn_after(Milliseconds(ctx.shared.ms.lock(|t| *t))).ok();
+        ctx.local.led.set_high().ok();
         cortex_m::asm::delay(480_000);
-        ctx.resources.led.lock(|l| l.set_low().ok());
+        ctx.local.led.set_low().ok();
     }
 }
