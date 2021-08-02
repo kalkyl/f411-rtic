@@ -55,7 +55,7 @@ mod app {
 
         let mono = DwtSystick::new(&mut ctx.core.DCB, ctx.core.DWT, ctx.core.SYST, FREQ);
 
-        emit_status::spawn().ok();
+        emit_message::spawn().ok();
         (Shared { tx }, Local {}, init::Monotonics(mono))
     }
 
@@ -64,20 +64,21 @@ mod app {
         loop {}
     }
 
+    // Triggers on DMA transfer complete
     #[task(binds=DMA2_STREAM7, shared = [tx])]
     fn on_dma(ctx: on_dma::Context) {
         ctx.shared.tx.clear_transfer_complete_interrupt();
-        emit_status::spawn_after(Seconds(1_u32)).ok();
+        emit_message::spawn_after(Seconds(1_u32)).ok();
     }
 
     #[task(shared = [tx])]
-    fn emit_status(ctx: emit_status::Context) {
-        let data = "Hello!!!";
-        defmt::info!("TX: {}", data);
+    fn emit_message(ctx: emit_message::Context) {
+        let msg = "Hello!!!";
+        defmt::info!("TX: {}", msg);
         let tx = ctx.shared.tx;
         unsafe {
             tx.next_transfer_with(|buf, _| {
-                buf.copy_from_slice(data.as_bytes());
+                buf.copy_from_slice(msg.as_bytes());
                 (buf, ())
             })
             .ok();

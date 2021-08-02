@@ -61,6 +61,7 @@ mod app {
         loop {}
     }
 
+    // Triggers on DMA transfer complete
     #[task(binds=DMA2_STREAM5, shared = [rx], priority = 2)]
     fn on_dma(ctx: on_dma::Context) {
         let rx = ctx.shared.rx;
