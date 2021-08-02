@@ -78,16 +78,16 @@ mod app {
     fn on_idle(ctx: on_idle::Context) {
         let rx = ctx.shared.rx;
         rx.pause(|_| clear_idle_interrupt());
-        let pending = unsafe { (*DMA2::ptr()).st[5].ndtr.read().ndt().bits() as usize };
+        let end = BUF_SIZE - unsafe { (*DMA2::ptr()).st[5].ndtr.read().ndt().bits() as usize };
         let mut data = [0u8; BUF_SIZE];
         unsafe {
             rx.next_transfer_with(|buf, _| {
-                data[..BUF_SIZE - pending].copy_from_slice(&buf[..BUF_SIZE - pending]);
+                data[..end].copy_from_slice(&buf[..end]);
                 (buf, ())
             })
             .ok()
         };
-        print::spawn(Vec::from_slice(&data[..BUF_SIZE - pending]).unwrap()).ok();
+        print::spawn(Vec::from_slice(&data[..end]).unwrap()).ok();
     }
 
     #[task(local = [msg: Vec<u8, 256> = Vec::new()], priority = 1)]
