@@ -1,4 +1,5 @@
 // $ cargo rb serial-dma-rx
+// Receive serial data using DMA
 #![no_main]
 #![no_std]
 
@@ -15,13 +16,12 @@ mod app {
     const BUF_SIZE: usize = 8;
 
     #[shared]
-    struct Shared {
-        #[lock_free]
-        rx: Transfer<Stream5<DMA2>, Rx<USART1>, PeripheralToMemory, &'static mut [u8; BUF_SIZE], 4>,
-    }
+    struct Shared {}
 
     #[local]
-    struct Local {}
+    struct Local {
+        rx: Transfer<Stream5<DMA2>, Rx<USART1>, PeripheralToMemory, &'static mut [u8; BUF_SIZE], 4>,
+    }
 
     #[init(local = [rx_buf: [u8; BUF_SIZE] = [0; BUF_SIZE]])]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
@@ -32,7 +32,7 @@ mod app {
         let gpioa = ctx.device.GPIOA.split();
         let rx_pin = gpioa.pa10.into_alternate();
         let serial_config = Config {
-            baudrate: 9_600.bps(),
+            baudrate: 115_200.bps(),
             wordlength: WordLength::DataBits8,
             parity: Parity::ParityNone,
             stopbits: StopBits::STOP1,
@@ -48,8 +48,8 @@ mod app {
             Transfer::init_peripheral_to_memory(stream, serial, ctx.local.rx_buf, None, dma_config);
         rx.start(|_| ());
 
-        defmt::info!("Send me 8 bytes");
-        (Shared { rx }, Local {}, init::Monotonics())
+        defmt::info!("Send me {} byte frames", BUF_SIZE);
+        (Shared {}, Local { rx }, init::Monotonics())
     }
 
     #[idle]
@@ -57,16 +57,15 @@ mod app {
         loop {}
     }
 
-    #[task(binds=DMA2_STREAM5, shared = [rx], priority = 2)]
+    #[task(binds=DMA2_STREAM5, local = [rx], priority = 2)]
     fn on_dma(ctx: on_dma::Context) {
+        let rx = ctx.local.rx;
         let data = unsafe {
-            ctx.shared
-                .rx
-                .next_transfer_with(|buf, _| {
-                    let data = *buf;
-                    (buf, data)
-                })
-                .unwrap()
+            rx.next_transfer_with(|buf, _| {
+                let data = *buf;
+                (buf, data)
+            })
+            .unwrap()
         };
         print::spawn(data).ok();
     }

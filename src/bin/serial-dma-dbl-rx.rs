@@ -1,4 +1,5 @@
 // $ cargo rb serial-dma-dbl-rx
+// Receive serial data using DMA with double buffer
 #![no_main]
 #![no_std]
 
@@ -15,13 +16,12 @@ mod app {
     const BUF_SIZE: usize = 8;
 
     #[shared]
-    struct Shared {
-        #[lock_free]
-        rx: Transfer<Stream5<DMA2>, Rx<USART1>, PeripheralToMemory, &'static mut [u8; BUF_SIZE], 4>,
-    }
+    struct Shared {}
 
     #[local]
-    struct Local {}
+    struct Local {
+        rx: Transfer<Stream5<DMA2>, Rx<USART1>, PeripheralToMemory, &'static mut [u8; BUF_SIZE], 4>,
+    }
 
     #[init(local = [buf1: [u8; BUF_SIZE] = [0; BUF_SIZE], buf2: [u8; BUF_SIZE] = [0; BUF_SIZE]])]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
@@ -54,8 +54,8 @@ mod app {
         );
         rx.start(|_| ());
 
-        defmt::info!("Send me data");
-        (Shared { rx }, Local {}, init::Monotonics())
+        defmt::info!("Send me {} byte frames", BUF_SIZE);
+        (Shared {}, Local { rx }, init::Monotonics())
     }
 
     #[idle]
@@ -63,16 +63,15 @@ mod app {
         loop {}
     }
 
-    #[task(binds=DMA2_STREAM5, shared = [rx], priority = 2)]
+    #[task(binds=DMA2_STREAM5, local = [rx], priority = 2)]
     fn on_dma(ctx: on_dma::Context) {
+        let rx = ctx.local.rx;
         let data = unsafe {
-            ctx.shared
-                .rx
-                .next_transfer_with(|buf, _| {
-                    let data = *buf;
-                    (buf, data)
-                })
-                .unwrap()
+            rx.next_transfer_with(|buf, _| {
+                let data = *buf;
+                (buf, data)
+            })
+            .unwrap()
         };
         print::spawn(data).ok();
     }

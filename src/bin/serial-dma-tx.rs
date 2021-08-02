@@ -1,4 +1,5 @@
 // $ cargo rb serial-dma-tx
+// Transmit serial data using DMA
 #![no_main]
 #![no_std]
 
@@ -38,7 +39,7 @@ mod app {
         let gpioa = ctx.device.GPIOA.split();
         let tx_pin = gpioa.pa9.into_alternate();
         let serial_config = Config {
-            baudrate: 9_600.bps(),
+            baudrate: 115_200.bps(),
             wordlength: WordLength::DataBits8,
             parity: Parity::ParityNone,
             stopbits: StopBits::STOP1,
@@ -49,7 +50,6 @@ mod app {
         let dma_config = DmaConfig::default()
             .transfer_complete_interrupt(true)
             .memory_increment(true);
-
         let tx =
             Transfer::init_memory_to_peripheral(stream, serial, ctx.local.tx_buf, None, dma_config);
 
