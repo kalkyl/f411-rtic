@@ -33,7 +33,7 @@ mod app {
     fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         ctx.device.RCC.ahb1enr.modify(|_, w| w.dma1en().enabled());
         let rcc = ctx.device.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
+        let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
 
         let gpioa = ctx.device.GPIOA.split();
         let tx_pin = gpioa.pa9.into_alternate();
