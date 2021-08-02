@@ -36,7 +36,7 @@ mod app {
         let mut sys_cfg = ctx.device.SYSCFG.constrain();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
-        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
+        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::Falling);
 
         defmt::info!("Press button!");
         (Shared {}, Local { btn, led }, init::Monotonics())
@@ -50,7 +50,7 @@ mod app {
     #[task(binds = EXTI15_10, local = [btn, led])]
     fn on_exti(ctx: on_exti::Context) {
         ctx.local.btn.clear_interrupt_pending_bit();
-        ctx.local.led.toggle().ok();
+        ctx.local.led.toggle();
         defmt::warn!("Button was pressed!");
     }
 }

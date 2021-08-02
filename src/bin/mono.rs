@@ -1,4 +1,6 @@
 // RTIC Monotonic impl for the 32-bit timers
+#![no_main]
+#![no_std]
 use rtic_monotonic::{embedded_time, Clock, Fraction, Instant, Monotonic};
 use stm32f4xx_hal::{
     pac::{RCC, TIM2, TIM5},

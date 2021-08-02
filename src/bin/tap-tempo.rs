@@ -42,7 +42,7 @@ mod app {
         let mut sys_cfg = ctx.device.SYSCFG.constrain();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
-        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
+        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::Falling);
 
         ctx.core.DCB.enable_trace();
         ctx.core.DWT.enable_cycle_counter();
@@ -83,7 +83,7 @@ mod app {
             handle.cancel().ok();
         }
         (ctx.shared.btn, ctx.shared.pressed, ctx.shared.ms).lock(|btn, pressed, ms| {
-            if btn.is_low().unwrap() {
+            if btn.is_low() {
                 if let Some(instant) = pressed.take() {
                     let diff: Option<Milliseconds> = monotonics::MyMono::now()
                         .checked_duration_since(&instant)
@@ -107,8 +107,8 @@ mod app {
     #[task(shared = [ms], local = [led])]
     fn blink(mut ctx: blink::Context) {
         blink::spawn_after(Milliseconds(ctx.shared.ms.lock(|t| *t))).ok();
-        ctx.local.led.set_high().ok();
+        ctx.local.led.set_high();
         cortex_m::asm::delay(480_000);
-        ctx.local.led.set_low().ok();
+        ctx.local.led.set_low();
     }
 }

@@ -12,6 +12,7 @@ mod app {
         prelude::*,
         pwm::{self, PwmChannels},
         stm32::TIM2,
+        timer::Timer,
     };
 
     #[shared]
@@ -34,16 +35,15 @@ mod app {
 
         // Set up the LED and PWM. On the Nucleo-F411RE it's connected to pin PA5.
         let gpioa = ctx.device.GPIOA.split();
-        let led = gpioa.pa5.into_alternate_af1();
-        let mut pwm = pwm::tim2(ctx.device.TIM2, led, clocks, 20.khz());
-        pwm.enable();
+        let led = gpioa.pa5.into_alternate();
+        let pwm = Timer::new(ctx.device.TIM2, &clocks).pwm(led, 20.khz());
 
         // Set up the button. On the Nucleo-F411RE it's connected to pin PC13.
         let gpioc = ctx.device.GPIOC.split();
         let mut btn = gpioc.pc13.into_pull_up_input();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
-        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
+        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::Falling);
 
         defmt::info!("Press button!");
         (Shared {}, Local { btn, pwm }, init::Monotonics())

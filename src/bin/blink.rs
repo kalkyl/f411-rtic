@@ -56,7 +56,7 @@ mod app {
 
     #[task(local = [led])]
     fn blink(ctx: blink::Context) {
-        ctx.local.led.toggle().ok();
+        ctx.local.led.toggle();
         defmt::info!("Blink!");
         blink::spawn_after(Seconds(1_u32)).ok();
     }

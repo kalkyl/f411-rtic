@@ -35,7 +35,7 @@ mod app {
         let mut sys_cfg = ctx.device.SYSCFG.constrain();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
-        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::RISING_FALLING);
+        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::RisingFalling);
 
         ctx.core.DCB.enable_trace();
         ctx.core.DWT.enable_cycle_counter();
@@ -68,7 +68,7 @@ mod app {
         }
         *ctx.local.clear = clear::spawn_after(Milliseconds(200_u32)).ok();
         (ctx.shared.btn, ctx.shared.count).lock(|btn, count| {
-            if btn.is_low().unwrap() {
+            if btn.is_low() {
                 match *count > 0 {
                     true => {
                         *count = 0;

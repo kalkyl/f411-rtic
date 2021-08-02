@@ -35,7 +35,7 @@ mod app {
         let mut sys_cfg = ctx.device.SYSCFG.constrain();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
-        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::RISING_FALLING);
+        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::RisingFalling);
 
         ctx.core.DCB.enable_trace();
         ctx.core.DWT.enable_cycle_counter();
@@ -66,7 +66,7 @@ mod app {
         if let Some(handle) = ctx.local.hold.take() {
             handle.cancel().ok();
         }
-        if ctx.shared.btn.lock(|b| b.is_low().unwrap()) {
+        if ctx.shared.btn.lock(|b| b.is_low()) {
             ctx.local.pressed_at.replace(monotonics::MyMono::now());
             *ctx.local.hold = hold::spawn_after(Milliseconds(1000_u32)).ok();
         } else {
@@ -86,7 +86,7 @@ mod app {
 
     #[task(shared = [btn])]
     fn hold(mut ctx: hold::Context) {
-        if ctx.shared.btn.lock(|b| b.is_low().unwrap()) {
+        if ctx.shared.btn.lock(|b| b.is_low()) {
             defmt::info!("Long press");
         }
     }

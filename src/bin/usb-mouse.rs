@@ -66,7 +66,7 @@ mod app {
     fn idle(mut ctx: idle::Context) -> ! {
         let counter = ctx.local.counter;
         loop {
-            let buttons = match ctx.local.btn.is_low().unwrap() {
+            let buttons = match ctx.local.btn.is_low() {
                 true => 1,
                 false => 0,
             };

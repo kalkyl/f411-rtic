@@ -14,7 +14,7 @@ mod app {
         gpio::{
             gpiob::{PB8, PB9},
             gpioc::PC13,
-            AlternateOD, Edge, ExtiPin, Input, PullUp, AF4,
+            Alternate, AlternateOD, Edge, ExtiPin, Input, OpenDrain, Pin, PullUp, AF4,
         },
         i2c::I2c,
         prelude::*,
@@ -44,10 +44,8 @@ mod app {
 
         // Set up I2C.
         let gpiob = ctx.device.GPIOB.split();
-        let mut scl = gpiob.pb8.into_alternate_af4_open_drain();
-        let mut sda = gpiob.pb9.into_alternate_af4_open_drain();
-        scl.internal_pull_up(true);
-        sda.internal_pull_up(true);
+        let scl = gpiob.pb8.into_alternate_open_drain();
+        let sda = gpiob.pb9.into_alternate_open_drain();
         let i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), clocks);
 
         // Configure the OLED display.
@@ -63,7 +61,7 @@ mod app {
         let mut btn = gpioc.pc13.into_pull_up_input();
         btn.make_interrupt_source(&mut sys_cfg);
         btn.enable_interrupt(&mut ctx.device.EXTI);
-        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::FALLING);
+        btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::Falling);
 
         defmt::info!("Press button!");
         (Shared {}, Local { btn, disp }, init::Monotonics())
