@@ -101,6 +101,13 @@ mod app {
         loop {}
     }
 
+    #[task(shared=[adc_transfer])]
+    fn start_conversion(ctx: start_conversion::Context) {
+        ctx.shared.adc_transfer.start(|adc| {
+            adc.start_conversion();
+        });
+    }
+
     // Triggers on ADC DMA transfer complete
     #[task(binds = DMA2_STREAM0, shared = [adc_transfer, voltage])]
     fn on_adc_dma(ctx: on_adc_dma::Context) {
@@ -118,20 +125,6 @@ mod app {
         start_conversion::spawn_after(Milliseconds(100_u32)).ok();
     }
 
-    #[task(shared=[adc_transfer])]
-    fn start_conversion(ctx: start_conversion::Context) {
-        ctx.shared.adc_transfer.start(|adc| {
-            adc.start_conversion();
-        });
-    }
-
-    // Triggers on serial DMA transfer complete
-    #[task(binds=DMA2_STREAM7, shared = [tx])]
-    fn on_tx_dma(ctx: on_tx_dma::Context) {
-        ctx.shared.tx.clear_transfer_complete_interrupt();
-        emit_status::spawn_after(Seconds(1_u32)).ok();
-    }
-
     #[task(shared = [tx, voltage])]
     fn emit_status(mut ctx: emit_status::Context) {
         let tx = ctx.shared.tx;
@@ -144,5 +137,12 @@ mod app {
             })
             .ok();
         }
+    }
+
+    // Triggers on serial DMA transfer complete
+    #[task(binds=DMA2_STREAM7, shared = [tx])]
+    fn on_tx_dma(ctx: on_tx_dma::Context) {
+        ctx.shared.tx.clear_transfer_complete_interrupt();
+        emit_status::spawn_after(Seconds(1_u32)).ok();
     }
 }
