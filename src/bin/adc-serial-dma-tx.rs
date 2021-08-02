@@ -110,7 +110,7 @@ mod app {
 
     // Triggers on ADC DMA transfer complete
     #[task(binds = DMA2_STREAM0, shared = [adc_transfer, voltage])]
-    fn on_adc_dma(ctx: on_adc_dma::Context) {
+    fn on_adc_dma(mut ctx: on_adc_dma::Context) {
         let transfer = ctx.shared.adc_transfer;
         let raw_voltage = unsafe {
             transfer
@@ -120,8 +120,8 @@ mod app {
                 })
                 .unwrap()
         };
-        let mut voltage = ctx.shared.voltage;
-        voltage.lock(|v| *v = (raw_voltage as f32) / ((2_i32.pow(12) - 1) as f32) * 3.3);
+        let voltage = (raw_voltage as f32) / ((2_i32.pow(12) - 1) as f32) * 3.3;
+        ctx.shared.voltage.lock(|v| *v = voltage);
         start_conversion::spawn_after(Milliseconds(100_u32)).ok();
     }
 
