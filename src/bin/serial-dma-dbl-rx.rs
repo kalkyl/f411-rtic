@@ -32,11 +32,9 @@ mod app {
         let gpioa = ctx.device.GPIOA.split();
         let rx_pin = gpioa.pa10.into_alternate();
         let serial_config = Config {
-            baudrate: 9_600.bps(),
-            wordlength: WordLength::DataBits8,
-            parity: Parity::ParityNone,
-            stopbits: StopBits::STOP1,
+            baudrate: 115_200.bps(),
             dma: stm32f4xx_hal::serial::config::DmaConfig::Rx,
+            ..Config::default()
         };
         let serial = Serial::rx(ctx.device.USART1, rx_pin, serial_config, clocks).unwrap();
         let stream = StreamsTuple::new(ctx.device.DMA2).5;
