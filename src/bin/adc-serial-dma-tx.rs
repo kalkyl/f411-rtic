@@ -5,7 +5,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::pac, peripherals = true, dispatchers=[SPI2])]
+#[rtic::app(device = stm32f4xx_hal::pac, peripherals = true, dispatchers=[SPI1, SPI2])]
 mod app {
     use dwt_systick_monotonic::DwtSystick;
     use rtic_monotonic::{Milliseconds, Seconds};
@@ -101,7 +101,7 @@ mod app {
         loop {}
     }
 
-    #[task(shared=[adc_transfer])]
+    #[task(shared=[adc_transfer], priority = 2)]
     fn start_conversion(ctx: start_conversion::Context) {
         ctx.shared.adc_transfer.start(|adc| {
             adc.start_conversion();
@@ -109,7 +109,7 @@ mod app {
     }
 
     // Triggers on ADC DMA transfer complete
-    #[task(binds = DMA2_STREAM0, shared = [adc_transfer, voltage])]
+    #[task(binds = DMA2_STREAM0, shared = [adc_transfer, voltage], priority = 2)]
     fn on_adc_dma(mut ctx: on_adc_dma::Context) {
         let transfer = ctx.shared.adc_transfer;
         let raw_voltage = unsafe {
