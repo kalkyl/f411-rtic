@@ -128,11 +128,11 @@ mod app {
     #[task(shared = [tx, voltage])]
     fn emit_status(mut ctx: emit_status::Context) {
         let tx = ctx.shared.tx;
-        let voltage = ctx.shared.voltage.lock(|t| *t).to_be_bytes();
-        defmt::info!("Voltage: {}V", f32::from_be_bytes(voltage));
+        let voltage = ctx.shared.voltage.lock(|t| *t);
+        defmt::info!("Voltage: {}V", voltage);
         unsafe {
             tx.next_transfer_with(|buf, _| {
-                buf.copy_from_slice(&voltage);
+                buf.copy_from_slice(&voltage.to_be_bytes());
                 (buf, ())
             })
             .ok();
