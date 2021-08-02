@@ -62,13 +62,6 @@ mod app {
         loop {}
     }
 
-    // Triggers on DMA transfer complete
-    #[task(binds=DMA2_STREAM7, shared = [tx])]
-    fn on_dma(ctx: on_dma::Context) {
-        ctx.shared.tx.clear_transfer_complete_interrupt();
-        emit_message::spawn_after(Seconds(1_u32)).ok();
-    }
-
     #[task(shared = [tx])]
     fn emit_message(ctx: emit_message::Context) {
         let msg = "Hello!!!";
@@ -81,5 +74,12 @@ mod app {
             })
             .ok();
         }
+    }
+
+    // Triggers on DMA transfer complete
+    #[task(binds=DMA2_STREAM7, shared = [tx])]
+    fn on_dma(ctx: on_dma::Context) {
+        ctx.shared.tx.clear_transfer_complete_interrupt();
+        emit_message::spawn_after(Seconds(1_u32)).ok();
     }
 }
