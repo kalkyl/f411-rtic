@@ -82,7 +82,7 @@ mod app {
         let mut data = [0u8; BUF_SIZE];
         unsafe {
             rx.next_transfer_with(|buf, _| {
-                data.copy_from_slice(buf);
+                data[..BUF_SIZE - pending].copy_from_slice(&buf[..BUF_SIZE - pending]);
                 (buf, ())
             })
             .ok()
