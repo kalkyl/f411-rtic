@@ -81,11 +81,10 @@ mod app {
         let end = BUF_SIZE - unsafe { (*DMA2::ptr()).st[5].ndtr.read().ndt().bits() as usize };
         let mut data = [0u8; BUF_SIZE];
         unsafe {
-            rx.next_transfer_with(|buf, _| {
+            let _ = rx.next_transfer_with(|buf, _| {
                 data[..end].copy_from_slice(&buf[..end]);
                 (buf, ())
-            })
-            .ok()
+            });
         };
         print::spawn(Vec::from_slice(&data[..end]).unwrap()).ok();
     }
