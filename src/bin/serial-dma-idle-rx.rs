@@ -7,8 +7,9 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, peripherals = true, dispatchers=[SPI2])]
 mod app {
+    use stm32f4xx_hal::dma::traits::Stream;
     use stm32f4xx_hal::{
-        dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamsTuple, Transfer},
+        dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamX, StreamsTuple, Transfer},
         pac::{DMA2, USART1},
         prelude::*,
         serial::{config::*, Rx, Serial},
@@ -78,7 +79,7 @@ mod app {
     fn on_idle(ctx: on_idle::Context) {
         let rx = ctx.shared.rx;
         rx.pause(|_| clear_idle_interrupt());
-        let end = BUF_SIZE - unsafe { (*DMA2::ptr()).st[5].ndtr.read().ndt().bits() as usize };
+        let end = BUF_SIZE - StreamX::<DMA2, 5>::get_number_of_transfers() as usize;
         let mut data = [0u8; BUF_SIZE];
         unsafe {
             let _ = rx.next_transfer_with(|buf, _| {
