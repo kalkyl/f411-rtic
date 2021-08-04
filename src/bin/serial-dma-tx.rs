@@ -9,11 +9,13 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 mod app {
     use dwt_systick_monotonic::DwtSystick;
     use rtic_monotonic::Seconds;
+    use stm32f4xx_hal::dma::traits::StreamISR;
+    use stm32f4xx_hal::pac::DMA2;
     use stm32f4xx_hal::{
-        dma::{config::DmaConfig, MemoryToPeripheral, Stream7, StreamsTuple, Transfer},
+        dma::{config::DmaConfig, MemoryToPeripheral, Stream7, StreamX, StreamsTuple, Transfer},
+        pac::USART1,
         prelude::*,
         serial::{config::*, Serial, Tx},
-        stm32::{DMA2, USART1},
     };
     const BUF_SIZE: usize = 8;
     const FREQ: u32 = 48_000_000;
@@ -79,7 +81,9 @@ mod app {
     // Triggers on DMA transfer complete
     #[task(binds=DMA2_STREAM7, shared = [tx])]
     fn on_dma(ctx: on_dma::Context) {
-        ctx.shared.tx.clear_transfer_complete_interrupt();
-        emit_message::spawn_after(Seconds(1_u32)).ok();
+        if StreamX::<DMA2, 7>::get_transfer_complete_flag() {
+            ctx.shared.tx.clear_transfer_complete_interrupt();
+            emit_message::spawn_after(Seconds(1_u32)).ok();
+        }
     }
 }
