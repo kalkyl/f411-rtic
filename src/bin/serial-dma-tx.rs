@@ -34,7 +34,6 @@ mod app {
 
     #[init(local = [tx_buf: [u8; BUF_SIZE] = [0; BUF_SIZE]])]
     fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
-        ctx.device.RCC.ahb1enr.modify(|_, w| w.dma1en().enabled());
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
 
