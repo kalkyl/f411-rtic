@@ -33,9 +33,7 @@ mod app {
     }
 
     #[local]
-    struct Local {
-        cobs_buf: CobsAccumulator<256>,
-    }
+    struct Local {}
 
     #[init(local = [rx_buf: [u8; BUF_SIZE] = [0; BUF_SIZE]])]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
@@ -62,13 +60,7 @@ mod app {
         rx.start(|_| ());
 
         defmt::info!("Send me: 02 7b 01 01 02 04 01 01 02 05 01 01 02 06 01 01 02 07 01 01 01 00");
-        (
-            Shared { rx },
-            Local {
-                cobs_buf: CobsAccumulator::new(),
-            },
-            init::Monotonics(),
-        )
+        (Shared { rx }, Local {}, init::Monotonics())
     }
 
     #[idle]
@@ -96,17 +88,17 @@ mod app {
         let rx = ctx.shared.rx;
         rx.pause(|_| clear_idle_interrupt());
         let end = BUF_SIZE - StreamX::<DMA2, 5>::get_number_of_transfers() as usize;
-        let mut data = [0u8; BUF_SIZE];
+        let data = &mut [0u8; BUF_SIZE][..end];
         unsafe {
             let _ = rx.next_transfer_with(|buf, _| {
-                data[..end].copy_from_slice(&buf[..end]);
+                data.copy_from_slice(&buf[..end]);
                 (buf, ())
             });
         };
-        print::spawn(Vec::from_slice(&data[..end]).unwrap()).ok();
+        print::spawn(Vec::from_slice(data).unwrap()).ok();
     }
 
-    #[task(local = [cobs_buf], priority = 1)]
+    #[task(local = [cobs_buf: CobsAccumulator<256> = CobsAccumulator::new()], priority = 1)]
     fn print(ctx: print::Context, data: Vec<u8, BUF_SIZE>) {
         match ctx.local.cobs_buf.feed::<MyData>(data.as_slice()) {
             FeedResult::Success { data, remaining: _ } => {

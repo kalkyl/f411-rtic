@@ -21,7 +21,7 @@ embedded-hal = "0.2.4"
 dwt-systick-monotonic = "0.1.0-alpha.0"
 rtic-monotonic = "0.1.0-alpha.2"
 heapless = "0.7.3"
-postcard = "0.7.1"
+postcard = "0.7.2"
 serde = { version = "1.0.127", default-features = false, features = ["derive"] }
 
 [dependencies.stm32f4xx-hal]
@@ -31,9 +31,6 @@ features = ["rt", "stm32f411", "usb_fs"]
 
 # [patch.crates-io]
 # stm32f4xx-hal = { path = "../stm32f4xx-hal" }
-
-# [patch.crates-io]
-# postcard = { path = "../postcard" }
 
 [features]
 # set logging levels here
