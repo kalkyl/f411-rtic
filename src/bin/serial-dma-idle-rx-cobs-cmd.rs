@@ -134,8 +134,8 @@ mod app {
             FeedResult::Success { data, .. } => {
                 defmt::info!("{:?}", data);
                 match data {
-                    Command::SetLed(s) => {
-                        *ctx.shared.status = s;
+                    Command::SetLed(status) => {
+                        *ctx.shared.status = status;
                         set_led::spawn().ok();
                     }
                 }
