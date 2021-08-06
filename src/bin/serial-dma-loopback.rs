@@ -191,16 +191,13 @@ mod app {
     #[task(local = [cmd: usize = 0], shared = [tx])]
     fn send_command(ctx: send_command::Context) {
         let cmd = ctx.local.cmd;
-        let temp_buf = &mut [0u8; 8][..];
-        let msg = postcard::to_slice_cobs(&COMMANDS[*cmd], temp_buf).unwrap();
         defmt::info!("TX: {:?}", COMMANDS[*cmd]);
         let tx = ctx.shared.tx;
         unsafe {
-            tx.next_transfer_with(|buf, _| {
-                buf[..msg.len()].copy_from_slice(msg);
+            let _ = tx.next_transfer_with(|buf, _| {
+                postcard::to_slice_cobs(&COMMANDS[*cmd], buf).ok();
                 (buf, ())
-            })
-            .ok();
+            });
         }
         *cmd = (*cmd + 1) % COMMANDS.len();
     }
