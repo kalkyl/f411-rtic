@@ -131,9 +131,9 @@ mod app {
     #[task(local = [cobs_buf: CobsAccumulator<64> = CobsAccumulator::new()], shared = [status], priority = 1, capacity = 2)]
     fn accumulate(ctx: accumulate::Context, data: Vec<u8, BUF_SIZE>) {
         match ctx.local.cobs_buf.feed::<Command>(data.as_slice()) {
-            FeedResult::Success { data, .. } => {
-                defmt::info!("{:?}", data);
-                match data {
+            FeedResult::Success { data: command, .. } => {
+                defmt::info!("Command: {:?}", command);
+                match command {
                     Command::SetLed(status) => {
                         *ctx.shared.status = status;
                         set_led::spawn().ok();
