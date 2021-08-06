@@ -32,7 +32,7 @@ mod app {
     const COMMANDS: [Command; 4] = [
         Command::SetLed(LedStatus::On),
         Command::SetLed(LedStatus::Off),
-        Command::SetLed(LedStatus::Blinking(500)),
+        Command::SetLed(LedStatus::Blinking(300)),
         Command::SetLed(LedStatus::Blinking(100)),
     ];
 
@@ -54,7 +54,7 @@ mod app {
     #[shared]
     struct Shared {
         #[lock_free]
-        handle: Option<set_led::SpawnHandle>,
+        handle: Option<update_led::SpawnHandle>,
         #[lock_free]
         status: LedStatus,
         #[lock_free]
@@ -167,7 +167,7 @@ mod app {
                         if let Some(handle) = ctx.shared.handle.take() {
                             handle.cancel().ok();
                         }
-                        set_led::spawn().ok();
+                        update_led::spawn().ok();
                     }
                 }
             }
@@ -176,30 +176,22 @@ mod app {
     }
 
     #[task(local = [led], shared = [status, handle], priority = 1)]
-    fn set_led(ctx: set_led::Context) {
+    fn update_led(ctx: update_led::Context) {
         let led = ctx.local.led;
         match ctx.shared.status {
             LedStatus::On => led.set_high(),
             LedStatus::Off => led.set_low(),
             LedStatus::Blinking(ms) => {
                 led.toggle();
-                *ctx.shared.handle = set_led::spawn_after(Milliseconds(*ms as u32)).ok();
+                *ctx.shared.handle = update_led::spawn_after(Milliseconds(*ms as u32)).ok();
             }
-        }
-    }
-
-    #[inline]
-    fn clear_idle_interrupt() {
-        unsafe {
-            let _ = (*USART1::ptr()).sr.read().idle();
-            let _ = (*USART1::ptr()).dr.read().bits();
         }
     }
 
     #[task(local = [cmd: usize = 0], shared = [tx])]
     fn send_command(ctx: send_command::Context) {
-        let temp_buf = &mut [0u8; 32][..];
         let cmd = ctx.local.cmd;
+        let temp_buf = &mut [0u8; 8][..];
         let msg = postcard::to_slice_cobs(&COMMANDS[*cmd], temp_buf).unwrap();
         defmt::info!("TX: {:?}", COMMANDS[*cmd]);
         let tx = ctx.shared.tx;
@@ -210,11 +202,7 @@ mod app {
             })
             .ok();
         }
-        *cmd = if *cmd == COMMANDS.len() - 1 {
-            0
-        } else {
-            *cmd + 1
-        };
+        *cmd = (*cmd + 1) % COMMANDS.len();
     }
 
     // Triggers on TX DMA transfer complete
@@ -222,5 +210,13 @@ mod app {
     fn on_tx_dma(ctx: on_tx_dma::Context) {
         ctx.shared.tx.clear_transfer_complete_interrupt();
         send_command::spawn_after(Milliseconds(2_000_u32)).ok();
+    }
+
+    #[inline]
+    fn clear_idle_interrupt() {
+        unsafe {
+            let _ = (*USART1::ptr()).sr.read().idle();
+            let _ = (*USART1::ptr()).dr.read().bits();
+        }
     }
 }
