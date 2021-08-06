@@ -41,6 +41,7 @@ mod app {
 
     #[shared]
     struct Shared {
+        #[lock_free]
         status: LedStatus,
         #[lock_free]
         rx: Transfer<Stream5<DMA2>, Rx<USART1>, PeripheralToMemory, &'static mut [u8; BUF_SIZE], 4>,
@@ -128,13 +129,13 @@ mod app {
     }
 
     #[task(local = [cobs_buf: CobsAccumulator<64> = CobsAccumulator::new()], shared = [status], priority = 1, capacity = 2)]
-    fn accumulate(mut ctx: accumulate::Context, data: Vec<u8, BUF_SIZE>) {
+    fn accumulate(ctx: accumulate::Context, data: Vec<u8, BUF_SIZE>) {
         match ctx.local.cobs_buf.feed::<Command>(data.as_slice()) {
             FeedResult::Success { data, .. } => {
                 defmt::info!("{:?}", data);
                 match data {
                     Command::SetLed(s) => {
-                        ctx.shared.status.lock(|status| *status = s);
+                        *ctx.shared.status = s;
                         set_led::spawn().ok();
                     }
                 }
@@ -143,17 +144,17 @@ mod app {
         };
     }
 
-    #[task(local = [led], shared = [status])]
-    fn set_led(mut ctx: set_led::Context) {
+    #[task(local = [led], shared = [status], priority = 1)]
+    fn set_led(ctx: set_led::Context) {
         let led = ctx.local.led;
-        ctx.shared.status.lock(|status| match status {
+        match ctx.shared.status {
             LedStatus::On => led.set_high(),
             LedStatus::Off => led.set_low(),
             LedStatus::Blinking(ms) => {
                 led.toggle();
                 set_led::spawn_after(Milliseconds(*ms as u32)).ok();
             }
-        });
+        }
     }
 
     #[inline]
