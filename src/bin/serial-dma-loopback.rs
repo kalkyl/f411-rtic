@@ -144,7 +144,7 @@ mod app {
     #[task(binds = USART1, shared = [rx], priority = 2)]
     fn on_idle(ctx: on_idle::Context) {
         let rx = ctx.shared.rx;
-        rx.pause(|_| clear_idle_interrupt());
+        rx.pause(|serial| serial.clear_idle_interrupt());
         let end = BUF_SIZE - StreamX::<DMA2, 5>::get_number_of_transfers() as usize;
         let data = &mut [0u8; BUF_SIZE][..end];
         unsafe {
@@ -207,13 +207,5 @@ mod app {
     fn on_tx_dma(ctx: on_tx_dma::Context) {
         ctx.shared.tx.clear_transfer_complete_interrupt();
         send_command::spawn_after(Milliseconds(2_000_u32)).ok();
-    }
-
-    #[inline]
-    fn clear_idle_interrupt() {
-        unsafe {
-            let _ = (*USART1::ptr()).sr.read().idle();
-            let _ = (*USART1::ptr()).dr.read().bits();
-        }
     }
 }

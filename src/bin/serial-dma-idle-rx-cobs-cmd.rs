@@ -67,9 +67,8 @@ mod app {
             dma: stm32f4xx_hal::serial::config::DmaConfig::Rx,
             ..Config::default()
         };
-        let serial = Serial::rx(ctx.device.USART1, rx_pin, serial_config, clocks).unwrap();
-        // Enable idle line interrupt
-        unsafe { (*USART1::ptr()).cr1.modify(|_, w| w.idleie().set_bit()) }
+        let mut serial = Serial::rx(ctx.device.USART1, rx_pin, serial_config, clocks).unwrap();
+        serial.listen_idle();
 
         let stream = StreamsTuple::new(ctx.device.DMA2).5;
         let dma_config = DmaConfig::default()
@@ -119,7 +118,7 @@ mod app {
     #[task(binds = USART1, shared = [rx], priority = 2)]
     fn on_idle(ctx: on_idle::Context) {
         let rx = ctx.shared.rx;
-        rx.pause(|_| clear_idle_interrupt());
+        rx.pause(|serial| serial.clear_idle_interrupt());
         let end = BUF_SIZE - StreamX::<DMA2, 5>::get_number_of_transfers() as usize;
         let data = &mut [0u8; BUF_SIZE][..end];
         unsafe {
@@ -160,14 +159,6 @@ mod app {
                 led.toggle();
                 *ctx.shared.handle = set_led::spawn_after(Milliseconds(*ms as u32)).ok();
             }
-        }
-    }
-
-    #[inline]
-    fn clear_idle_interrupt() {
-        unsafe {
-            let _ = (*USART1::ptr()).sr.read().idle();
-            let _ = (*USART1::ptr()).dr.read().bits();
         }
     }
 }
