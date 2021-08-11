@@ -42,6 +42,8 @@ mod app {
     #[shared]
     struct Shared {
         #[lock_free]
+        handle: Option<update_led::SpawnHandle>,
+        #[lock_free]
         status: LedStatus,
         #[lock_free]
         rx: Transfer<Stream5<DMA2>, Rx<USART1>, PeripheralToMemory, &'static mut [u8; BUF_SIZE], 4>,
@@ -82,6 +84,7 @@ mod app {
         defmt::info!("LED blink (500ms): [0x1, 0x4, 0x2, 0xf4, 0x1, 0x0]");
         (
             Shared {
+                handle: None,
                 rx,
                 status: LedStatus::Off,
             },
@@ -127,7 +130,7 @@ mod app {
         accumulate::spawn(Vec::from_slice(data).unwrap()).ok();
     }
 
-    #[task(local = [cobs_buf: CobsAccumulator<64> = CobsAccumulator::new()], shared = [status], priority = 1, capacity = 2)]
+    #[task(local = [cobs_buf: CobsAccumulator<64> = CobsAccumulator::new()], shared = [status, handle], priority = 1, capacity = 2)]
     fn accumulate(ctx: accumulate::Context, data: Vec<u8, BUF_SIZE>) {
         match ctx.local.cobs_buf.feed::<Command>(data.as_slice()) {
             FeedResult::Success { data: command, .. } => {
@@ -135,6 +138,9 @@ mod app {
                 match command {
                     Command::SetLed(status) => {
                         *ctx.shared.status = status;
+                        if let Some(handle) = ctx.shared.handle.take() {
+                            handle.cancel().ok();
+                        }
                         update_led::spawn().ok();
                     }
                 }
@@ -143,18 +149,15 @@ mod app {
         };
     }
 
-    #[task(local = [led, handle: Option<update_led::SpawnHandle> = None], shared = [status], priority = 1)]
+    #[task(local = [led], shared = [status, handle], priority = 1)]
     fn update_led(ctx: update_led::Context) {
-        if let Some(handle) = ctx.local.handle.take() {
-            handle.cancel().ok();
-        }
         let led = ctx.local.led;
         match ctx.shared.status {
             LedStatus::On => led.set_high(),
             LedStatus::Off => led.set_low(),
             LedStatus::Blinking(ms) => {
                 led.toggle();
-                *ctx.local.handle = update_led::spawn_after(Milliseconds(*ms as u32)).ok();
+                *ctx.shared.handle = update_led::spawn_after(Milliseconds(*ms as u32)).ok();
             }
         }
     }
