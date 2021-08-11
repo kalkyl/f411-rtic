@@ -97,7 +97,7 @@ mod app {
         parser::spawn(Vec::from_slice(data).unwrap()).ok();
     }
 
-    #[task(local = [cobs_buf: CobsAccumulator<64> = CobsAccumulator::new()], priority = 1, capacity = 2)]
+    #[task(local = [cobs_buf: CobsAccumulator<16> = CobsAccumulator::new()], priority = 1, capacity = 2)]
     fn parser(ctx: parser::Context, data: Vec<u8, BUF_SIZE>) {
         match ctx.local.cobs_buf.feed::<MyData>(data.as_slice()) {
             FeedResult::Success { data, .. } => {
