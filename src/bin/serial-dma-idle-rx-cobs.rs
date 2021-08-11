@@ -78,7 +78,7 @@ mod app {
             })
             .unwrap()
         };
-        accumulate::spawn(Vec::from_slice(&data).unwrap()).ok();
+        parser::spawn(Vec::from_slice(&data).unwrap()).ok();
     }
 
     // Triggers on serial line Idle
@@ -94,11 +94,11 @@ mod app {
                 (buf, ())
             });
         };
-        accumulate::spawn(Vec::from_slice(data).unwrap()).ok();
+        parser::spawn(Vec::from_slice(data).unwrap()).ok();
     }
 
     #[task(local = [cobs_buf: CobsAccumulator<64> = CobsAccumulator::new()], priority = 1, capacity = 2)]
-    fn accumulate(ctx: accumulate::Context, data: Vec<u8, BUF_SIZE>) {
+    fn parser(ctx: parser::Context, data: Vec<u8, BUF_SIZE>) {
         match ctx.local.cobs_buf.feed::<MyData>(data.as_slice()) {
             FeedResult::Success { data, .. } => {
                 defmt::info!("{:?}", data);

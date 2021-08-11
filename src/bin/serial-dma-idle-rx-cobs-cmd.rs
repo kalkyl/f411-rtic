@@ -67,8 +67,7 @@ mod app {
             dma: stm32f4xx_hal::serial::config::DmaConfig::Rx,
             ..Config::default()
         };
-        let mut serial = Serial::rx(ctx.device.USART1, rx_pin, serial_config, clocks).unwrap();
-        serial.listen_idle();
+        let serial = Serial::rx(ctx.device.USART1, rx_pin, serial_config, clocks).unwrap();
 
         let stream = StreamsTuple::new(ctx.device.DMA2).5;
         let dma_config = DmaConfig::default()
@@ -76,7 +75,7 @@ mod app {
             .memory_increment(true);
         let mut rx =
             Transfer::init_peripheral_to_memory(stream, serial, ctx.local.rx_buf, None, dma_config);
-        rx.start(|_| ());
+        rx.start(|serial| serial.listen_idle());
 
         defmt::info!("Send commands:");
         defmt::info!("LED on: [0x1, 0x2, 0x1, 0x0]");
@@ -111,7 +110,7 @@ mod app {
             })
             .unwrap()
         };
-        accumulate::spawn(Vec::from_slice(&data).unwrap()).ok();
+        parser::spawn(Vec::from_slice(&data).unwrap()).ok();
     }
 
     // Triggers on serial line Idle
@@ -127,11 +126,11 @@ mod app {
                 (buf, ())
             });
         };
-        accumulate::spawn(Vec::from_slice(data).unwrap()).ok();
+        parser::spawn(Vec::from_slice(data).unwrap()).ok();
     }
 
     #[task(local = [cobs_buf: CobsAccumulator<64> = CobsAccumulator::new()], shared = [status, handle], priority = 1, capacity = 2)]
-    fn accumulate(ctx: accumulate::Context, data: Vec<u8, BUF_SIZE>) {
+    fn parser(ctx: parser::Context, data: Vec<u8, BUF_SIZE>) {
         match ctx.local.cobs_buf.feed::<Command>(data.as_slice()) {
             FeedResult::Success { data: command, .. } => {
                 defmt::info!("Command: {:?}", command);
