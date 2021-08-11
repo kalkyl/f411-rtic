@@ -57,8 +57,8 @@ mod app {
     #[init(local = [rx_buf: [u8; BUF_SIZE] = [0; BUF_SIZE]])]
     fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
-        let mono = DwtSystick::new(&mut ctx.core.DCB, ctx.core.DWT, ctx.core.SYST, 48_000_000);
+        let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
+        let mono = DwtSystick::new(&mut ctx.core.DCB, ctx.core.DWT, ctx.core.SYST, FREQ);
 
         let gpioa = ctx.device.GPIOA.split();
         let rx_pin = gpioa.pa10.into_alternate();
