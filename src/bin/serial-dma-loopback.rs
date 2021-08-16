@@ -39,12 +39,12 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type SysMono = DwtSystick<FREQ>;
 
-    #[derive(Serialize, Deserialize, Format)]
-    enum Command {
+    #[derive(Clone, Copy, Serialize, Deserialize, Format)]
+    pub enum Command {
         SetLed(LedStatus),
     }
 
-    #[derive(Serialize, Deserialize, Format)]
+    #[derive(Clone, Copy, Serialize, Deserialize, Format)]
     pub enum LedStatus {
         On,
         Off,
@@ -106,7 +106,7 @@ mod app {
             dma_config,
         );
         rx.start(|_| ());
-        send_command::spawn().ok();
+        send_command::spawn(COMMANDS[0]).ok();
         (
             Shared {
                 handle: None,
@@ -188,24 +188,24 @@ mod app {
         }
     }
 
-    #[task(local = [cmd: usize = 0], shared = [tx])]
-    fn send_command(ctx: send_command::Context) {
-        let cmd = ctx.local.cmd;
-        defmt::info!("TX: {:?}", COMMANDS[*cmd]);
+    #[task(shared = [tx])]
+    fn send_command(ctx: send_command::Context, command: Command) {
+        defmt::info!("TX: {:?}", command);
         let tx = ctx.shared.tx;
         unsafe {
             let _ = tx.next_transfer_with(|buf, _| {
-                postcard::to_slice_cobs(&COMMANDS[*cmd], buf).ok();
+                postcard::to_slice_cobs(&command, buf).ok();
                 (buf, ())
             });
         }
-        *cmd = (*cmd + 1) % COMMANDS.len();
     }
 
     // Triggers on TX DMA transfer complete
-    #[task(binds=DMA2_STREAM7, shared = [tx])]
+    #[task(binds=DMA2_STREAM7, local = [cmd: usize = 0], shared = [tx])]
     fn on_tx_dma(ctx: on_tx_dma::Context) {
+        let cmd = ctx.local.cmd;
         ctx.shared.tx.clear_transfer_complete_interrupt();
-        send_command::spawn_after(Milliseconds(2_000_u32)).ok();
+        *cmd = (*cmd + 1) % COMMANDS.len();
+        send_command::spawn_after(Milliseconds(2_000_u32), COMMANDS[*cmd]).ok();
     }
 }
