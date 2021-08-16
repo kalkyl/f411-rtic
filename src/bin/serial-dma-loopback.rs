@@ -37,12 +37,12 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type SysMono = DwtSystick<FREQ>;
 
-    #[derive(Serialize, Deserialize, Format)]
+    #[derive(Serialize, Deserialize, Format, Clone, Copy)]
     pub enum Command {
         SetLed(LedStatus),
     }
 
-    #[derive(Serialize, Deserialize, Format)]
+    #[derive(Serialize, Deserialize, Format, Clone, Copy)]
     pub enum LedStatus {
         On,
         Off,
@@ -94,7 +94,7 @@ mod app {
         let tx = Transfer::init_memory_to_peripheral(dma2.7, serial_tx, tx_buf, None, dma_config);
         rx.start(|serial| serial.listen_idle());
 
-        send_command::spawn(&COMMANDS[0]).ok();
+        send_command::spawn(COMMANDS[0]).ok();
         (
             Shared {
                 handle: None,
@@ -115,12 +115,12 @@ mod app {
     }
 
     #[task(shared = [tx])]
-    fn send_command(ctx: send_command::Context, command: &'static Command) {
+    fn send_command(ctx: send_command::Context, command: Command) {
         defmt::info!("TX: {:?}", command);
         let tx = ctx.shared.tx;
         unsafe {
             let _ = tx.next_transfer_with(|buf, _| {
-                postcard::to_slice_cobs(command, buf).ok();
+                postcard::to_slice_cobs(&command, buf).ok();
                 (buf, ())
             });
         }
@@ -132,7 +132,7 @@ mod app {
         ctx.shared.tx.clear_transfer_complete_interrupt();
         let cmd = ctx.local.cmd;
         *cmd = (*cmd + 1) % COMMANDS.len();
-        send_command::spawn_after(Milliseconds(2_000_u32), &COMMANDS[*cmd]).ok();
+        send_command::spawn_after(Milliseconds(2_000_u32), COMMANDS[*cmd]).ok();
     }
 
     // Triggers on RX DMA transfer complete
