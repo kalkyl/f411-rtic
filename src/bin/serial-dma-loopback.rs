@@ -203,8 +203,8 @@ mod app {
     // Triggers on TX DMA transfer complete
     #[task(binds=DMA2_STREAM7, local = [cmd: usize = 0], shared = [tx])]
     fn on_tx_dma(ctx: on_tx_dma::Context) {
-        let cmd = ctx.local.cmd;
         ctx.shared.tx.clear_transfer_complete_interrupt();
+        let cmd = ctx.local.cmd;
         *cmd = (*cmd + 1) % COMMANDS.len();
         send_command::spawn_after(Milliseconds(2_000_u32), COMMANDS[*cmd]).ok();
     }
