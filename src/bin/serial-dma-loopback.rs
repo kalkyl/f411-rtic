@@ -22,7 +22,7 @@ mod app {
         gpio::{gpioa::PA5, Output, PushPull},
         pac::{DMA2, USART1},
         prelude::*,
-        serial::{config::*, Event, Rx, Serial, Tx},
+        serial::{config::*, Rx, Serial, Tx},
     };
     const BUF_SIZE: usize = 8;
     const FREQ: u32 = 48_000_000;
@@ -84,14 +84,14 @@ mod app {
             Serial::new(ctx.device.USART1, (tx_pin, rx_pin), serial_config, clocks).unwrap();
 
         let (serial_tx, serial_rx) = serial.split();
-        let dma = StreamsTuple::new(ctx.device.DMA2);
+        let dma2 = StreamsTuple::new(ctx.device.DMA2);
         let dma_config = DmaConfig::default()
             .transfer_complete_interrupt(true)
             .memory_increment(true);
         let (tx_buf, rx_buf) = (ctx.local.tx_buf, ctx.local.rx_buf);
         let mut rx =
-            Transfer::init_peripheral_to_memory(dma.5, serial_rx, rx_buf, None, dma_config);
-        let tx = Transfer::init_memory_to_peripheral(dma.7, serial_tx, tx_buf, None, dma_config);
+            Transfer::init_peripheral_to_memory(dma2.5, serial_rx, rx_buf, None, dma_config);
+        let tx = Transfer::init_memory_to_peripheral(dma2.7, serial_tx, tx_buf, None, dma_config);
         rx.start(|serial| serial.listen_idle());
 
         send_command::spawn(&COMMANDS[0]).ok();
