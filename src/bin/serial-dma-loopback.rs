@@ -8,25 +8,23 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, peripherals = true, dispatchers=[SPI2])]
 mod app {
+    use defmt::Format;
     use dwt_systick_monotonic::DwtSystick;
+    use heapless::Vec;
+    use postcard::{CobsAccumulator, FeedResult};
     use rtic_monotonic::Milliseconds;
-    use stm32f4xx_hal::dma::traits::Stream;
-    use stm32f4xx_hal::serial::Event;
+    use serde::{Deserialize, Serialize};
     use stm32f4xx_hal::{
         dma::{
-            config::DmaConfig, MemoryToPeripheral, PeripheralToMemory, Stream5, Stream7, StreamX,
-            StreamsTuple, Transfer,
+            config::DmaConfig, traits::Stream, MemoryToPeripheral, PeripheralToMemory, Stream5,
+            Stream7, StreamX, StreamsTuple, Transfer,
         },
         gpio::{gpioa::PA5, Output, PushPull},
         pac::{DMA2, USART1},
         prelude::*,
-        serial::{config::*, Rx, Serial, Tx},
+        serial::{config::*, Event, Rx, Serial, Tx},
     };
     const BUF_SIZE: usize = 8;
-    use defmt::Format;
-    use heapless::Vec;
-    use postcard::{CobsAccumulator, FeedResult};
-    use serde::{Deserialize, Serialize};
     const FREQ: u32 = 48_000_000;
 
     const COMMANDS: [Command; 4] = [
@@ -71,8 +69,8 @@ mod app {
     #[init(local = [rx_buf: [u8; BUF_SIZE] = [0; BUF_SIZE], tx_buf: [u8; BUF_SIZE] = [0; BUF_SIZE]])]
     fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
-        let mono = DwtSystick::new(&mut ctx.core.DCB, ctx.core.DWT, ctx.core.SYST, 48_000_000);
+        let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
+        let mono = DwtSystick::new(&mut ctx.core.DCB, ctx.core.DWT, ctx.core.SYST, FREQ);
 
         let gpioa = ctx.device.GPIOA.split();
         let tx_pin = gpioa.pa9.into_alternate();
@@ -87,25 +85,16 @@ mod app {
         serial.listen(Event::Idle);
 
         let (serial_tx, serial_rx) = serial.split();
-        let streams = StreamsTuple::new(ctx.device.DMA2);
+        let dma = StreamsTuple::new(ctx.device.DMA2);
         let dma_config = DmaConfig::default()
             .transfer_complete_interrupt(true)
             .memory_increment(true);
-        let mut rx = Transfer::init_peripheral_to_memory(
-            streams.5,
-            serial_rx,
-            ctx.local.rx_buf,
-            None,
-            dma_config,
-        );
-        let tx = Transfer::init_memory_to_peripheral(
-            streams.7,
-            serial_tx,
-            ctx.local.tx_buf,
-            None,
-            dma_config,
-        );
+        let (tx_buf, rx_buf) = (ctx.local.tx_buf, ctx.local.rx_buf);
+        let mut rx =
+            Transfer::init_peripheral_to_memory(dma.5, serial_rx, rx_buf, None, dma_config);
+        let tx = Transfer::init_memory_to_peripheral(dma.7, serial_tx, tx_buf, None, dma_config);
         rx.start(|_| ());
+
         send_command::spawn(&COMMANDS[0]).ok();
         (
             Shared {
@@ -124,6 +113,27 @@ mod app {
     #[idle]
     fn idle(_: idle::Context) -> ! {
         loop {}
+    }
+
+    #[task(shared = [tx])]
+    fn send_command(ctx: send_command::Context, command: &'static Command) {
+        defmt::info!("TX: {:?}", command);
+        let tx = ctx.shared.tx;
+        unsafe {
+            let _ = tx.next_transfer_with(|buf, _| {
+                postcard::to_slice_cobs(command, buf).ok();
+                (buf, ())
+            });
+        }
+    }
+
+    // Triggers on TX DMA transfer complete
+    #[task(binds=DMA2_STREAM7, local = [cmd: usize = 0], shared = [tx])]
+    fn on_tx_dma(ctx: on_tx_dma::Context) {
+        ctx.shared.tx.clear_transfer_complete_interrupt();
+        let cmd = ctx.local.cmd;
+        *cmd = (*cmd + 1) % COMMANDS.len();
+        send_command::spawn_after(Milliseconds(2_000_u32), &COMMANDS[*cmd]).ok();
     }
 
     // Triggers on RX DMA transfer complete
@@ -186,26 +196,5 @@ mod app {
                 *ctx.shared.handle = update_led::spawn_after(Milliseconds(*ms as u32)).ok();
             }
         }
-    }
-
-    #[task(shared = [tx])]
-    fn send_command(ctx: send_command::Context, command: &'static Command) {
-        defmt::info!("TX: {:?}", command);
-        let tx = ctx.shared.tx;
-        unsafe {
-            let _ = tx.next_transfer_with(|buf, _| {
-                postcard::to_slice_cobs(command, buf).ok();
-                (buf, ())
-            });
-        }
-    }
-
-    // Triggers on TX DMA transfer complete
-    #[task(binds=DMA2_STREAM7, local = [cmd: usize = 0], shared = [tx])]
-    fn on_tx_dma(ctx: on_tx_dma::Context) {
-        ctx.shared.tx.clear_transfer_complete_interrupt();
-        let cmd = ctx.local.cmd;
-        *cmd = (*cmd + 1) % COMMANDS.len();
-        send_command::spawn_after(Milliseconds(2_000_u32), &COMMANDS[*cmd]).ok();
     }
 }
