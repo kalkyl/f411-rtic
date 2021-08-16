@@ -39,12 +39,12 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type SysMono = DwtSystick<FREQ>;
 
-    #[derive(Clone, Copy, Serialize, Deserialize, Format)]
+    #[derive(Serialize, Deserialize, Format)]
     pub enum Command {
         SetLed(LedStatus),
     }
 
-    #[derive(Clone, Copy, Serialize, Deserialize, Format)]
+    #[derive(Serialize, Deserialize, Format)]
     pub enum LedStatus {
         On,
         Off,
@@ -106,7 +106,7 @@ mod app {
             dma_config,
         );
         rx.start(|_| ());
-        send_command::spawn(COMMANDS[0]).ok();
+        send_command::spawn(&COMMANDS[0]).ok();
         (
             Shared {
                 handle: None,
@@ -189,12 +189,12 @@ mod app {
     }
 
     #[task(shared = [tx])]
-    fn send_command(ctx: send_command::Context, command: Command) {
+    fn send_command(ctx: send_command::Context, command: &'static Command) {
         defmt::info!("TX: {:?}", command);
         let tx = ctx.shared.tx;
         unsafe {
             let _ = tx.next_transfer_with(|buf, _| {
-                postcard::to_slice_cobs(&command, buf).ok();
+                postcard::to_slice_cobs(command, buf).ok();
                 (buf, ())
             });
         }
@@ -206,6 +206,6 @@ mod app {
         ctx.shared.tx.clear_transfer_complete_interrupt();
         let cmd = ctx.local.cmd;
         *cmd = (*cmd + 1) % COMMANDS.len();
-        send_command::spawn_after(Milliseconds(2_000_u32), COMMANDS[*cmd]).ok();
+        send_command::spawn_after(Milliseconds(2_000_u32), &COMMANDS[*cmd]).ok();
     }
 }
