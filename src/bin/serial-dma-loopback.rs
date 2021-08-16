@@ -80,9 +80,8 @@ mod app {
             dma: stm32f4xx_hal::serial::config::DmaConfig::TxRx,
             ..Config::default()
         };
-        let mut serial =
+        let serial =
             Serial::new(ctx.device.USART1, (tx_pin, rx_pin), serial_config, clocks).unwrap();
-        serial.listen(Event::Idle);
 
         let (serial_tx, serial_rx) = serial.split();
         let dma = StreamsTuple::new(ctx.device.DMA2);
@@ -93,7 +92,7 @@ mod app {
         let mut rx =
             Transfer::init_peripheral_to_memory(dma.5, serial_rx, rx_buf, None, dma_config);
         let tx = Transfer::init_memory_to_peripheral(dma.7, serial_tx, tx_buf, None, dma_config);
-        rx.start(|_| ());
+        rx.start(|serial| serial.listen_idle());
 
         send_command::spawn(&COMMANDS[0]).ok();
         (
