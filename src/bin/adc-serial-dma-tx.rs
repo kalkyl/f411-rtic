@@ -30,7 +30,7 @@ mod app {
 
     #[shared]
     struct Shared {
-        voltage: f32,
+        voltage: u16,
         #[lock_free]
         adc_transfer:
             Transfer<Stream0<DMA2>, Adc<ADC1>, PeripheralToMemory, &'static mut [u16; 1], 0>,
@@ -89,7 +89,7 @@ mod app {
             Shared {
                 tx,
                 adc_transfer,
-                voltage: 0.0,
+                voltage: 0,
             },
             Local {},
             init::Monotonics(mono),
@@ -120,15 +120,15 @@ mod app {
                 })
                 .unwrap()
         };
-        let voltage = (raw_voltage as f32) / ((2_i32.pow(12) - 1) as f32) * 3.3;
-        ctx.shared.voltage.lock(|v| *v = voltage);
+        ctx.shared.voltage.lock(|v| *v = raw_voltage);
         start_conversion::spawn_after(Milliseconds(100_u32)).ok();
     }
 
     #[task(shared = [tx, voltage])]
     fn emit_status(mut ctx: emit_status::Context) {
         let tx = ctx.shared.tx;
-        let voltage = ctx.shared.voltage.lock(|t| *t);
+        let raw_voltage = ctx.shared.voltage.lock(|t| *t);
+        let voltage = (raw_voltage as f32) / ((2_i32.pow(12) - 1) as f32) * 3.3;
         defmt::info!("Voltage: {}V", voltage);
         unsafe {
             tx.next_transfer_with(|buf, _| {
