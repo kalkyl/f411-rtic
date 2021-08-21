@@ -171,12 +171,12 @@ mod app {
     }
 
     fn clear_peak(peak: &mut Option<(f32, Instant<MyMono>)>) {
-        if let Some((level, instant)) = peak.take() {
+        if let Some((_, instant)) = peak {
             let duration: Option<Milliseconds> = monotonics::MyMono::now()
-                .checked_duration_since(&instant)
+                .checked_duration_since(instant)
                 .and_then(|d| d.try_into().ok());
             match duration {
-                Some(Milliseconds(t)) if t < PEAK_HOLD => *peak = Some((level, instant)),
+                Some(Milliseconds(t)) if t > PEAK_HOLD => *peak = None,
                 _ => (),
             }
         }
