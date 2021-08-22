@@ -59,13 +59,7 @@ mod app {
         ctx.core.DWT.enable_cycle_counter();
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
-
-        let mono = DwtSystick::new(
-            &mut ctx.core.DCB,
-            ctx.core.DWT,
-            ctx.core.SYST,
-            clocks.hclk().0,
-        );
+        let mono = DwtSystick::new(&mut ctx.core.DCB, ctx.core.DWT, ctx.core.SYST, FREQ);
 
         let gpioa = ctx.device.GPIOA.split();
         let mosi = gpioa.pa7.into_alternate();
