@@ -19,10 +19,10 @@ mod app {
     };
     use ws2812_spi::{self, devices, Ws2812};
     const FREQ: u32 = 48_000_000;
-    const DECAY: f32 = 0.005;
+    const DECAY: f32 = 1.0 - 0.005;
     const PEAK_HOLD: u32 = 800;
-    const NUM_LEDS: usize = 24;
-    const THRESHOLDS: [(u16, RGB8); NUM_LEDS / 2] = [
+    const SIZE: usize = 12;
+    const THRESHOLDS: [(u16, RGB8); SIZE] = [
         (16_u16, colors::GREEN),
         (32, colors::GREEN),
         (64, colors::GREEN),
@@ -113,17 +113,17 @@ mod app {
                     pk_l.replace((in_l, monotonics::MyMono::now()));
                     in_l
                 }
-                false => *env_l * (1.0 - DECAY),
+                false => *env_l * DECAY,
             };
             *env_r = match in_r > *env_r {
                 true => {
                     pk_r.replace((in_r, monotonics::MyMono::now()));
                     in_r
                 }
-                false => *env_r * (1.0 - DECAY),
+                false => *env_r * DECAY,
             };
         });
-        mock_adc::spawn_after(Microseconds(900u32)).ok();
+        mock_adc::spawn_after(Microseconds(900_u32)).ok();
     }
 
     #[task(shared = [env, peak], local = [meter])]
@@ -135,15 +135,11 @@ mod app {
         let right = bargraph(&THRESHOLDS, env_r, clear_peak(&pk_r));
         let pixels = left.iter().chain(right.iter().rev()).cloned();
         meter.write(brightness(pixels, 10)).ok();
-        update_leds::spawn_after(Milliseconds(15u32)).ok();
+        update_leds::spawn_after(Milliseconds(15_u32)).ok();
     }
 
-    fn bargraph<const N: usize>(
-        thresh: &[(u16, RGB8); N],
-        env: f32,
-        pk: Option<(f32, Instant<MyMono>)>,
-    ) -> [RGB8; N] {
-        let mut pixels = [RGB8::default(); N];
+    fn bargraph(thresh: &[(u16, RGB8); SIZE], env: f32, pk: Option<Peak>) -> [RGB8; SIZE] {
+        let mut pixels = [RGB8::default(); SIZE];
         for (i, led) in pixels.iter_mut().enumerate() {
             let scaling = match thresh.iter().rposition(|t| env as u16 >= t.0) {
                 Some(t) if i <= t => 1.0,
@@ -153,11 +149,9 @@ mod app {
                 None if i == 0 => env / thresh[0].0 as f32,
                 _ => 0.0,
             };
-            *led = match thresh
-                .iter()
-                .rposition(|t| pk.map(|(level, _)| level as u16 >= t.0).unwrap_or(false))
+            *led = match pk.and_then(|(level, _)| thresh.iter().rposition(|t| level as u16 >= t.0))
             {
-                Some(t) if t + 1 == i || (t == N - 1 && i == t) => colors::RED,
+                Some(t) if t + 1 == i || (t == SIZE - 1 && i == t) => colors::RED,
                 _ => RGB8 {
                     r: (thresh[i].1.r as f32 * scaling) as u8,
                     g: (thresh[i].1.g as f32 * scaling) as u8,
