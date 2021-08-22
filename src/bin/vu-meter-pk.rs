@@ -140,17 +140,17 @@ mod app {
 
     fn bargraph<const N: usize>(
         thresh: &[(u16, RGB8); N],
-        x: f32,
+        env: f32,
         pk: Option<(f32, Instant<MyMono>)>,
     ) -> [RGB8; N] {
         let mut pixels = [RGB8::default(); N];
         for (i, led) in pixels.iter_mut().enumerate() {
-            let scaling = match thresh.iter().rposition(|t| x as u16 >= t.0) {
+            let scaling = match thresh.iter().rposition(|t| env as u16 >= t.0) {
                 Some(t) if i <= t => 1.0,
                 Some(t) if i == t + 1 => {
-                    (x - thresh[t].0 as f32) / (thresh[t + 1].0 - thresh[t].0) as f32
+                    (env - thresh[t].0 as f32) / (thresh[t + 1].0 - thresh[t].0) as f32
                 }
-                None if i == 0 => x / thresh[0].0 as f32,
+                None if i == 0 => env / thresh[0].0 as f32,
                 _ => 0.0,
             };
             *led = match thresh
