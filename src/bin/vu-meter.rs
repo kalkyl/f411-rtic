@@ -108,12 +108,11 @@ mod app {
 
     #[task(shared = [env], local = [meter])]
     fn update_leds(mut ctx: update_leds::Context) {
-        let meter = ctx.local.meter;
         let (env_l, env_r) = ctx.shared.env.lock(|env| *env);
         let left = bargraph(&THRESHOLDS, env_l);
         let right = bargraph(&THRESHOLDS, env_r);
         let pixels = left.iter().chain(right.iter().rev()).cloned();
-        meter.write(brightness(pixels, 10)).ok();
+        ctx.local.meter.write(brightness(pixels, 10)).ok();
         update_leds::spawn_after(Milliseconds(15_u32)).ok();
     }
 
