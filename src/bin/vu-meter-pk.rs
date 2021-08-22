@@ -129,12 +129,10 @@ mod app {
     #[task(shared = [env, peak], local = [meter])]
     fn update_leds(mut ctx: update_leds::Context) {
         let meter = ctx.local.meter;
-        let (env_l, env_r) = ctx.shared.env.lock(|e| *e);
-        let (mut pk_l, mut pk_r) = ctx.shared.peak.lock(|e| *e);
-        clear_peak(&mut pk_l);
-        clear_peak(&mut pk_r);
-        let left = bargraph(&THRESHOLDS, env_l, pk_l);
-        let right = bargraph(&THRESHOLDS, env_r, pk_r);
+        let (env_l, env_r) = ctx.shared.env.lock(|env| *env);
+        let (pk_l, pk_r) = ctx.shared.peak.lock(|pk| *pk);
+        let left = bargraph(&THRESHOLDS, env_l, clear_peak(&pk_l));
+        let right = bargraph(&THRESHOLDS, env_r, clear_peak(&pk_r));
         let pixels = left.iter().chain(right.iter().rev()).cloned();
         meter.write(brightness(pixels, 10)).ok();
         update_leds::spawn_after(Milliseconds(15u32)).ok();
@@ -170,15 +168,13 @@ mod app {
         pixels
     }
 
-    fn clear_peak(peak: &mut Option<(f32, Instant<MyMono>)>) {
-        if let Some((_, instant)) = peak {
-            let duration: Option<Milliseconds> = monotonics::MyMono::now()
-                .checked_duration_since(instant)
-                .and_then(|d| d.try_into().ok());
-            match duration {
-                Some(Milliseconds(t)) if t > PEAK_HOLD => *peak = None,
-                _ => (),
-            }
-        }
+    fn clear_peak(peak: &Option<Peak>) -> Option<Peak> {
+        peak.filter(|(_, instant)| {
+            monotonics::MyMono::now()
+                .checked_duration_since(&instant)
+                .and_then(|d| d.try_into().ok())
+                .map(|t: Milliseconds<u32>| t < Milliseconds(PEAK_HOLD))
+                .unwrap_or(false)
+        })
     }
 }
