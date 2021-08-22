@@ -171,7 +171,7 @@ mod app {
     fn clear_peak(peak: &Option<Peak>) -> Option<Peak> {
         peak.filter(|(_, instant)| {
             monotonics::MyMono::now()
-                .checked_duration_since(&instant)
+                .checked_duration_since(instant)
                 .and_then(|d| d.try_into().ok())
                 .map(|t: Milliseconds<u32>| t < Milliseconds(PEAK_HOLD))
                 .unwrap_or(false)
