@@ -96,23 +96,23 @@ mod app {
         let t = ctx.local.t;
         const L: [(u16, f32); 2] = [(0, 4096.0), (700, 2048.0)];
         const R: [(u16, f32); 2] = [(0, 4096.0), (900, 600.0)];
-        let in_l = L.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
-        let in_r = R.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
+        let smpl_l = L.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
+        let smpl_r = R.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
         *t = (*t + 1) % 2048;
 
         // Calc and update signal envelopes
         (ctx.shared.env, ctx.shared.peak).lock(|(env_l, env_r), (pk_l, pk_r)| {
-            *env_l = match in_l > *env_l {
+            *env_l = match smpl_l > *env_l {
                 true => {
-                    pk_l.replace((in_l, monotonics::MyMono::now()));
-                    in_l
+                    pk_l.replace((smpl_l, monotonics::MyMono::now()));
+                    smpl_l
                 }
                 false => *env_l * DECAY,
             };
-            *env_r = match in_r > *env_r {
+            *env_r = match smpl_r > *env_r {
                 true => {
-                    pk_r.replace((in_r, monotonics::MyMono::now()));
-                    in_r
+                    pk_r.replace((smpl_r, monotonics::MyMono::now()));
+                    smpl_r
                 }
                 false => *env_r * DECAY,
             };
