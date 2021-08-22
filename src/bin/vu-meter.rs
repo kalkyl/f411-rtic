@@ -17,9 +17,9 @@ mod app {
     };
     use ws2812_spi::{self, devices, Ws2812};
     const FREQ: u32 = 48_000_000;
-    const DECAY: f32 = 0.005;
-    const NUM_LEDS: usize = 24;
-    const THRESHOLDS: [(u16, RGB8); NUM_LEDS / 2] = [
+    const DECAY: f32 = 1.0 - 0.005;
+    const SIZE: usize = 12;
+    const THRESHOLDS: [(u16, RGB8); SIZE] = [
         (16_u16, colors::GREEN),
         (32, colors::GREEN),
         (64, colors::GREEN),
@@ -54,13 +54,7 @@ mod app {
         ctx.core.DWT.enable_cycle_counter();
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
-
-        let mono = DwtSystick::new(
-            &mut ctx.core.DCB,
-            ctx.core.DWT,
-            ctx.core.SYST,
-            clocks.hclk().0,
-        );
+        let mono = DwtSystick::new(&mut ctx.core.DCB, ctx.core.DWT, ctx.core.SYST, FREQ);
 
         let gpioa = ctx.device.GPIOA.split();
         let mosi = gpioa.pa7.into_alternate();
@@ -94,44 +88,44 @@ mod app {
         let t = ctx.local.t;
         const L: [(u16, f32); 2] = [(0, 4096.0), (700, 2048.0)];
         const R: [(u16, f32); 2] = [(0, 4096.0), (900, 600.0)];
-        let in_l = L.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
-        let in_r = R.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
+        let smpl_l = L.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
+        let smpl_r = R.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
         *t = (*t + 1) % 2048;
 
         // Calc and update signal envelopes
-        ctx.shared.env.lock(|(l, r)| {
-            *l = match in_l > *l {
-                true => in_l,
-                false => *l * (1.0 - DECAY),
+        ctx.shared.env.lock(|(env_l, env_r)| {
+            *env_l = match smpl_l > *env_l {
+                true => smpl_l,
+                false => *env_l * DECAY,
             };
-            *r = match in_r > *r {
-                true => in_r,
-                false => *r * (1.0 - DECAY),
+            *env_r = match smpl_r > *env_r {
+                true => smpl_r,
+                false => *env_r * DECAY,
             };
         });
-        mock_adc::spawn_after(Microseconds(900u32)).ok();
+        mock_adc::spawn_after(Microseconds(900_u32)).ok();
     }
 
     #[task(shared = [env], local = [meter])]
     fn update_leds(mut ctx: update_leds::Context) {
         let meter = ctx.local.meter;
-        let (env_l, env_r) = ctx.shared.env.lock(|e| *e);
+        let (env_l, env_r) = ctx.shared.env.lock(|env| *env);
         let left = bargraph(&THRESHOLDS, env_l);
         let right = bargraph(&THRESHOLDS, env_r);
         let pixels = left.iter().chain(right.iter().rev()).cloned();
         meter.write(brightness(pixels, 10)).ok();
-        update_leds::spawn_after(Milliseconds(15u32)).ok();
+        update_leds::spawn_after(Milliseconds(15_u32)).ok();
     }
 
-    fn bargraph<const N: usize>(thresh: &[(u16, RGB8); N], x: f32) -> [RGB8; N] {
-        let mut pixels = [RGB8::default(); N];
+    fn bargraph(thresh: &[(u16, RGB8); SIZE], env: f32) -> [RGB8; SIZE] {
+        let mut pixels = [RGB8::default(); SIZE];
         for (i, led) in pixels.iter_mut().enumerate() {
-            let scaling = match thresh.iter().rposition(|t| x as u16 >= t.0) {
+            let scaling = match thresh.iter().rposition(|t| env as u16 >= t.0) {
                 Some(t) if i <= t => 1.0,
                 Some(t) if i == t + 1 => {
-                    (x - thresh[t].0 as f32) / (thresh[t + 1].0 - thresh[t].0) as f32
+                    (env - thresh[t].0 as f32) / (thresh[t + 1].0 - thresh[t].0) as f32
                 }
-                None if i == 0 => x / thresh[0].0 as f32,
+                None if i == 0 => env / thresh[0].0 as f32,
                 _ => 0.0,
             };
             *led = RGB8 {
