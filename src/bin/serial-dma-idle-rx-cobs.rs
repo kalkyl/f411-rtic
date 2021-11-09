@@ -5,7 +5,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::pac, peripherals = true, dispatchers=[SPI2])]
+#[rtic::app(device = stm32f4xx_hal::pac, dispatchers=[SPI2])]
 mod app {
     use stm32f4xx_hal::dma::traits::Stream;
     use stm32f4xx_hal::{

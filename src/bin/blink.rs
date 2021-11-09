@@ -4,7 +4,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, dispatchers = [USART1])]
+#[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
     use dwt_systick_monotonic::DwtSystick;
     use rtic::time::duration::Seconds;

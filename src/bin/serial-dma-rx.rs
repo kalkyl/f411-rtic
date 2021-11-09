@@ -5,13 +5,13 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, dispatchers=[SPI2])]
+#[rtic::app(device = stm32f4xx_hal::pac, dispatchers=[SPI2])]
 mod app {
     use stm32f4xx_hal::{
         dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamsTuple, Transfer},
         prelude::*,
         serial::{config::*, Rx, Serial},
-        stm32::{DMA2, USART1},
+        pac::{DMA2, USART1},
     };
     const BUF_SIZE: usize = 8;
 

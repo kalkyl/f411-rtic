@@ -4,7 +4,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
+#[rtic::app(device = stm32f4xx_hal::pac)]
 mod app {
     use core::fmt::Write;
     use ssd1306::{
@@ -14,11 +14,11 @@ mod app {
         gpio::{
             gpiob::{PB8, PB9},
             gpioc::PC13,
-            Alternate, AlternateOD, Edge, ExtiPin, Input, OpenDrain, Pin, PullUp, AF4,
+            AlternateOD, Edge, ExtiPin, Input, PullUp, AF4,
         },
         i2c::I2c,
+        pac::I2C1,
         prelude::*,
-        stm32::I2C1,
     };
 
     #[shared]

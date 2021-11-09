@@ -4,7 +4,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
+#[rtic::app(device = stm32f4xx_hal::pac)]
 mod app {
     use stm32f4xx_hal::{
         otg_fs::{UsbBus, UsbBusType, USB},
@@ -33,8 +33,8 @@ mod app {
             usb_global: ctx.device.OTG_FS_GLOBAL,
             usb_device: ctx.device.OTG_FS_DEVICE,
             usb_pwrclk: ctx.device.OTG_FS_PWRCLK,
-            pin_dm: gpioa.pa11.into_alternate_af10(),
-            pin_dp: gpioa.pa12.into_alternate_af10(),
+            pin_dm: gpioa.pa11.into_alternate(),
+            pin_dp: gpioa.pa12.into_alternate(),
             hclk: clocks.hclk(),
         };
         let usb_bus = ctx.local.usb_bus;

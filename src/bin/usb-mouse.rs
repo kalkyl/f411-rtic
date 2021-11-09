@@ -4,7 +4,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
+#[rtic::app(device = stm32f4xx_hal::pac)]
 mod app {
     use stm32f4xx_hal::{
         gpio::{gpioc::PC13, Input, PullUp},
@@ -42,8 +42,8 @@ mod app {
             usb_global: ctx.device.OTG_FS_GLOBAL,
             usb_device: ctx.device.OTG_FS_DEVICE,
             usb_pwrclk: ctx.device.OTG_FS_PWRCLK,
-            pin_dm: gpioa.pa11.into_alternate_af10(),
-            pin_dp: gpioa.pa12.into_alternate_af10(),
+            pin_dm: gpioa.pa11.into_alternate(),
+            pin_dp: gpioa.pa12.into_alternate(),
             hclk: clocks.hclk(),
         };
 
@@ -75,6 +75,7 @@ mod app {
                 y: 0,
                 buttons,
                 wheel: 0,
+                pan: 0,
             };
             ctx.shared.hid.lock(|hid| hid.push_input(&report).ok());
             *counter = (*counter + 1) % 128;

@@ -4,7 +4,7 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, dispatchers = [USART1])]
+#[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
     use dwt_systick_monotonic::DwtSystick;
     use rtic::time::duration::{Microseconds, Milliseconds};
@@ -63,7 +63,7 @@ mod app {
             ctx.device.SPI1,
             (NoPin, NoPin, mosi),
             ws2812_spi::MODE,
-            stm32f4xx_hal::time::KiloHertz(3_000).into(),
+            stm32f4xx_hal::time::KiloHertz(3_000),
             clocks,
         );
         let meter = ws2812_spi::Ws2812::new(spi);

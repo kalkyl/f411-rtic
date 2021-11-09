@@ -4,14 +4,14 @@
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true)]
+#[rtic::app(device = stm32f4xx_hal::pac)]
 mod app {
     use pwm::C1;
     use stm32f4xx_hal::{
         gpio::{gpioc::PC13, Edge, ExtiPin, Input, PullUp},
+        pac::TIM2,
         prelude::*,
         pwm::{self, PwmChannels},
-        stm32::TIM2,
         timer::Timer,
     };
 

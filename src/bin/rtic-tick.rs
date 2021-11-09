@@ -5,7 +5,7 @@
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
 mod mono; // monotonic timer impl for TIM2
 
-#[rtic::app(device = stm32f4xx_hal::stm32, peripherals = true, dispatchers = [USART1])]
+#[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
     use super::mono::MonoTimer;
     use rtic::time::duration::Seconds;
