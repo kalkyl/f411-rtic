@@ -1,4 +1,4 @@
-// $ cargo rb serial-dma-loopback
+// $ DEFMT_LOG=info cargo rb serial-dma-loopback
 // Send/receive commands using serial dma
 // Connect pin PA9 to PA10
 #![no_main]

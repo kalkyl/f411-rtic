@@ -1,4 +1,4 @@
-// $ cargo rb usb-mouse
+// $ DEFMT_LOG=info cargo rb usb-mouse
 #![no_main]
 #![no_std]
 

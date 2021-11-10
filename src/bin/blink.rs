@@ -1,4 +1,4 @@
-// $ cargo rb blink
+// $ DEFMT_LOG=info cargo rb blink
 #![no_main]
 #![no_std]
 

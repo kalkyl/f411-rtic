@@ -1,4 +1,4 @@
-// $ cargo rb serial-dma-rx
+// $ DEFMT_LOG=info cargo rb serial-dma-rx
 // Receive serial data using DMA
 #![no_main]
 #![no_std]
@@ -9,9 +9,9 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 mod app {
     use stm32f4xx_hal::{
         dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamsTuple, Transfer},
+        pac::{DMA2, USART1},
         prelude::*,
         serial::{config::*, Rx, Serial},
-        pac::{DMA2, USART1},
     };
     const BUF_SIZE: usize = 8;
 

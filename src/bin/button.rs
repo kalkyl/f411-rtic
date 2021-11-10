@@ -1,4 +1,4 @@
-// $ cargo rb button
+// $ DEFMT_LOG=info cargo rb button
 #![no_main]
 #![no_std]
 

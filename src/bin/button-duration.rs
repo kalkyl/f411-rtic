@@ -1,4 +1,4 @@
-// $ cargo rb button-duration
+// $ DEFMT_LOG=info cargo rb button-duration
 #![no_main]
 #![no_std]
 

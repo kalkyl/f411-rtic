@@ -1,4 +1,4 @@
-// $ cargo rb serial-dma-dbl-rx
+// $ DEFMT_LOG=info cargo rb serial-dma-dbl-rx
 // Receive serial data using DMA with double buffer
 #![no_main]
 #![no_std]

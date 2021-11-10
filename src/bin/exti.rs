@@ -1,4 +1,4 @@
-// $ cargo rb exti
+// $ DEFMT_LOG=info cargo rb exti
 #![no_main]
 #![no_std]
 

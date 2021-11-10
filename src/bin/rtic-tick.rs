@@ -1,4 +1,4 @@
-// $ cargo rb rtic-tick
+// $ DEFMT_LOG=info cargo rb rtic-tick
 #![no_main]
 #![no_std]
 

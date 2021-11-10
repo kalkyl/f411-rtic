@@ -1,4 +1,4 @@
-// $ cargo rb serial-dma-idle-rx-cobs-cmd
+// $ DEFMT_LOG=info cargo rb serial-dma-idle-rx-cobs-cmd
 // Receive serial data of arbitrary length using DMA
 #![no_main]
 #![no_std]

@@ -8,8 +8,8 @@ use stm32f4xx_hal::{
         gpiob::{PB8, PB9},
         Floating, Input,
     },
+    pac,
     prelude::*,
-    stm32,
 };
 
 struct State {

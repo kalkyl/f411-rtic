@@ -1,4 +1,4 @@
-// $ cargo rb vu-meter
+// $ DEFMT_LOG=info cargo rb vu-meter
 #![no_main]
 #![no_std]
 

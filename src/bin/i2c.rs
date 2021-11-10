@@ -1,4 +1,4 @@
-// $ cargo rb i2c
+// $ DEFMT_LOG=info cargo rb i2c
 #![no_main]
 #![no_std]
 

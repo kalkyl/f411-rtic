@@ -1,4 +1,4 @@
-// $ cargo rb serial-dma-tx
+// $ DEFMT_LOG=info cargo rb serial-dma-tx
 // Transmit serial data using DMA
 #![no_main]
 #![no_std]

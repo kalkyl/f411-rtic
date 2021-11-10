@@ -1,4 +1,4 @@
-// $ cargo rb tap-tempo
+// $ DEFMT_LOG=info cargo rb tap-tempo
 #![no_main]
 #![no_std]
 

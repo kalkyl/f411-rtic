@@ -1,4 +1,4 @@
-// $ cargo rb usb-serial
+// $ DEFMT_LOG=info cargo rb usb-serial
 #![no_main]
 #![no_std]
 
