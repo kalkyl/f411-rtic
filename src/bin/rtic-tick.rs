@@ -19,7 +19,7 @@ mod app {
     struct Local {}
 
     #[monotonic(binds = TIM5, default = true)]
-    type MyMono = MonoTimer<pac::TIM5, FREQ>;
+    type MyMono = MonoTimer<pac::TIM5, 1_000_000>;
 
     #[init]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
