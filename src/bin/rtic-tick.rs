@@ -18,14 +18,14 @@ mod app {
     #[local]
     struct Local {}
 
-    #[monotonic(binds = TIM2, default = true)]
-    type MyMono = MonoTimer<pac::TIM2, FREQ>;
+    #[monotonic(binds = TIM5, default = true)]
+    type MyMono = MonoTimer<pac::TIM5, FREQ>;
 
     #[init]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
-        let mono = MyMono::new(ctx.device.TIM2, &clocks);
+        let mono = MyMono::new(ctx.device.TIM5, &clocks);
         tick::spawn().ok();
         (Shared {}, Local {}, init::Monotonics(mono))
     }

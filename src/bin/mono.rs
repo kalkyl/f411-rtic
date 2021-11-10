@@ -1,6 +1,4 @@
 // RTIC Monotonic impl for the 32-bit timers
-#![no_main]
-#![no_std]
 pub use fugit::{self, ExtU32};
 use rtic_monotonic::Monotonic;
 use stm32f4xx_hal::{
@@ -16,7 +14,8 @@ impl<const FREQ: u32> MonoTimer<TIM2, FREQ> {
         rcc.apb1enr.modify(|_, w| w.tim2en().set_bit());
         rcc.apb1rstr.modify(|_, w| w.tim2rst().set_bit());
         rcc.apb1rstr.modify(|_, w| w.tim2rst().clear_bit());
-        let prescaler = clocks.hclk().0 / FREQ - 1;
+        let pclk_mul = if clocks.ppre1() == 1 { 1 } else { 2 };
+        let prescaler = clocks.pclk1().0 * pclk_mul / FREQ - 1;
         timer.psc.write(|w| w.psc().bits(prescaler as u16));
         timer.arr.write(|w| unsafe { w.bits(u32::MAX) });
         timer.egr.write(|w| w.ug().set_bit());
@@ -61,7 +60,8 @@ impl<const FREQ: u32> MonoTimer<TIM5, FREQ> {
         rcc.apb1enr.modify(|_, w| w.tim5en().set_bit());
         rcc.apb1rstr.modify(|_, w| w.tim5rst().set_bit());
         rcc.apb1rstr.modify(|_, w| w.tim5rst().clear_bit());
-        let prescaler = clocks.hclk().0 / FREQ - 1;
+        let pclk_mul = if clocks.ppre1() == 1 { 1 } else { 2 };
+        let prescaler = clocks.pclk1().0 * pclk_mul / FREQ - 1;
         timer.psc.write(|w| w.psc().bits(prescaler as u16));
         timer.arr.write(|w| unsafe { w.bits(u32::MAX) });
         timer.egr.write(|w| w.ug().set_bit());
