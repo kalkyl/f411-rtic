@@ -7,8 +7,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers=[SPI2])]
 mod app {
-    use dwt_systick_monotonic::DwtSystick;
-    use rtic_monotonic::Seconds;
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use stm32f4xx_hal::dma::traits::StreamISR;
     use stm32f4xx_hal::pac::DMA2;
     use stm32f4xx_hal::{
@@ -82,7 +81,7 @@ mod app {
     fn on_dma(ctx: on_dma::Context) {
         if StreamX::<DMA2, 7>::get_transfer_complete_flag() {
             ctx.shared.tx.clear_transfer_complete_interrupt();
-            emit_message::spawn_after(Seconds(1_u32)).ok();
+            emit_message::spawn_after(1.secs()).ok();
         }
     }
 }

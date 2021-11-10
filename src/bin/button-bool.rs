@@ -6,15 +6,15 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
-    use dwt_systick_monotonic::DwtSystick;
-    use rtic::time::duration::{Milliseconds, Seconds};
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use stm32f4xx_hal::{
         gpio::{gpioc::PC13, Edge, ExtiPin, Input, PullUp},
         prelude::*,
     };
+    const FREQ: u32 = 48_000_000;
 
     #[monotonic(binds = SysTick, default = true)]
-    type MyMono = DwtSystick<48_000_000>; // 48 MHz
+    type MyMono = DwtSystick<FREQ>;
 
     #[shared]
     struct Shared {
@@ -28,7 +28,7 @@ mod app {
     #[init]
     fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
+        let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
 
         let gpioc = ctx.device.GPIOC.split();
         let mut btn = gpioc.pc13.into_pull_up_input();
@@ -65,7 +65,7 @@ mod app {
     #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
         ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
-        debounce::spawn_after(Milliseconds(30_u32)).ok();
+        debounce::spawn_after(30.millis()).ok();
     }
 
     #[task(shared = [btn, was_pressed], local = [hold: Option<hold::SpawnHandle> = None])]
@@ -77,7 +77,7 @@ mod app {
         (ctx.shared.btn, ctx.shared.was_pressed).lock(|btn, was_pressed| {
             if btn.is_low() {
                 *was_pressed = true;
-                *hold = hold::spawn_after(Seconds(1_u32)).ok();
+                *hold = hold::spawn_after(1.secs()).ok();
             } else {
                 if *was_pressed {
                     *was_pressed = false;

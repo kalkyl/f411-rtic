@@ -7,8 +7,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers=[SPI1, SPI2])]
 mod app {
-    use dwt_systick_monotonic::DwtSystick;
-    use rtic_monotonic::{Milliseconds, Seconds};
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use stm32f4xx_hal::{
         adc::{
             config::{AdcConfig, Dma, SampleTime, Scan, Sequence},
@@ -121,7 +120,7 @@ mod app {
                 .unwrap()
         };
         ctx.shared.voltage.lock(|v| *v = raw_voltage);
-        start_conversion::spawn_after(Milliseconds(100_u32)).ok();
+        start_conversion::spawn_after(100.millis()).ok();
     }
 
     #[task(shared = [tx, voltage])]
@@ -143,6 +142,6 @@ mod app {
     #[task(binds=DMA2_STREAM7, shared = [tx])]
     fn on_tx_dma(ctx: on_tx_dma::Context) {
         ctx.shared.tx.clear_transfer_complete_interrupt();
-        emit_status::spawn_after(Seconds(1_u32)).ok();
+        emit_status::spawn_after(1.secs()).ok();
     }
 }

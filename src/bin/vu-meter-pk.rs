@@ -6,10 +6,10 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
-    use core::convert::TryInto;
-    use dwt_systick_monotonic::DwtSystick;
-    use rtic::time::duration::{Microseconds, Milliseconds};
-    use rtic_monotonic::Instant;
+    use dwt_systick_monotonic::{
+        fugit::{MillisDurationU32, TimerInstantU32},
+        DwtSystick, ExtU32,
+    };
     use smart_leds::{brightness, colors, SmartLedsWrite, RGB8};
     use stm32f4xx_hal::{
         gpio::{Alternate, NoPin, Pin},
@@ -37,7 +37,7 @@ mod app {
         (4096, colors::RED),
     ];
     type MeterSPI = Spi<SPI1, (NoPin, NoPin, Pin<Alternate<5>, 'A', 7>), TransferModeNormal>;
-    type Peak = (f32, Instant<MyMono>);
+    type Peak = (f32, TimerInstantU32<FREQ>);
 
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<FREQ>;
@@ -117,7 +117,7 @@ mod app {
                 false => *env_r * DECAY,
             };
         });
-        mock_adc::spawn_after(Microseconds(900_u32)).ok();
+        mock_adc::spawn_after(900.millis()).ok();
     }
 
     #[task(shared = [env, peak], local = [meter])]
@@ -128,7 +128,7 @@ mod app {
         let right = bargraph(&THRESHOLDS, env_r, clear_peak(&pk_r));
         let pixels = left.iter().chain(right.iter().rev()).cloned();
         ctx.local.meter.write(brightness(pixels, 10)).ok();
-        update_leds::spawn_after(Milliseconds(15_u32)).ok();
+        update_leds::spawn_after(15.millis()).ok();
     }
 
     fn bargraph(thresh: &[(u16, RGB8); SIZE], env: f32, pk: Option<Peak>) -> [RGB8; SIZE] {
@@ -157,11 +157,7 @@ mod app {
 
     fn clear_peak(peak: &Option<Peak>) -> Option<Peak> {
         peak.filter(|(_, instant)| {
-            monotonics::MyMono::now()
-                .checked_duration_since(instant)
-                .and_then(|d| d.try_into().ok())
-                .map(|t: Milliseconds<u32>| t < Milliseconds(PEAK_HOLD))
-                .unwrap_or(false)
+            monotonics::now() - *instant < PEAK_HOLD.millis() as MillisDurationU32
         })
     }
 }

@@ -6,8 +6,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
-    use dwt_systick_monotonic::DwtSystick;
-    use rtic::time::duration::Seconds;
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use stm32f4xx_hal::{
         gpio::{gpioa::PA5, Output, PushPull},
         prelude::*,
@@ -45,7 +44,7 @@ mod app {
         );
 
         defmt::info!("Hello world!");
-        blink::spawn_after(Seconds(1_u32)).ok();
+        blink::spawn_after(1.secs()).ok();
         (Shared {}, Local { led }, init::Monotonics(mono))
     }
 
@@ -58,6 +57,6 @@ mod app {
     fn blink(ctx: blink::Context) {
         ctx.local.led.toggle();
         defmt::info!("Blink!");
-        blink::spawn_after(Seconds(1_u32)).ok();
+        blink::spawn_after(1.secs()).ok();
     }
 }

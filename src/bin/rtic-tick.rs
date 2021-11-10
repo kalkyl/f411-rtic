@@ -8,8 +8,9 @@ mod mono; // monotonic timer impl for TIM2
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
     use super::mono::MonoTimer;
-    use rtic::time::duration::Seconds;
+    use fugit::ExtU32;
     use stm32f4xx_hal::{pac, prelude::*};
+    const FREQ: u32 = 48_000_000;
 
     #[shared]
     struct Shared {}
@@ -18,12 +19,12 @@ mod app {
     struct Local {}
 
     #[monotonic(binds = TIM2, default = true)]
-    type MyMono = MonoTimer<pac::TIM2, 48_000_000>;
+    type MyMono = MonoTimer<pac::TIM2, FREQ>;
 
     #[init]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
+        let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
         let mono = MyMono::new(ctx.device.TIM2, &clocks);
         tick::spawn().ok();
         (Shared {}, Local {}, init::Monotonics(mono))
@@ -37,6 +38,6 @@ mod app {
     #[task]
     fn tick(_: tick::Context) {
         defmt::info!("Tick!");
-        tick::spawn_after(Seconds(1_u32)).ok();
+        tick::spawn_after(1.secs()).ok();
     }
 }
