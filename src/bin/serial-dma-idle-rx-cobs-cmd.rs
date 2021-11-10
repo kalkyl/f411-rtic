@@ -7,8 +7,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers=[SPI2])]
 mod app {
-    use dwt_systick_monotonic::DwtSystick;
-    use rtic_monotonic::Milliseconds;
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use stm32f4xx_hal::dma::traits::Stream;
     use stm32f4xx_hal::{
         dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamX, StreamsTuple, Transfer},
@@ -156,7 +155,7 @@ mod app {
             LedStatus::Off => led.set_low(),
             LedStatus::Blinking(ms) => {
                 led.toggle();
-                *ctx.shared.handle = update_led::spawn_after(Milliseconds(*ms as u32)).ok();
+                *ctx.shared.handle = update_led::spawn_after((*ms as u32).millis()).ok();
             }
         }
     }

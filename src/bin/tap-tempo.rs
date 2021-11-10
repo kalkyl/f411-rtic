@@ -6,22 +6,24 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
-    use core::convert::TryInto;
-    use dwt_systick_monotonic::DwtSystick;
-    use rtic::time::{duration::Milliseconds, Instant};
+    use dwt_systick_monotonic::{
+        fugit::{MillisDurationU32, TimerInstantU32},
+        DwtSystick, ExtU32,
+    };
     use stm32f4xx_hal::{
         gpio::{gpioa::PA5, gpioc::PC13, Edge, ExtiPin, Input, Output, PullUp, PushPull},
         prelude::*,
     };
+    const FREQ: u32 = 48_000_000;
 
     #[monotonic(binds = SysTick, default = true)]
-    type MyMono = DwtSystick<48_000_000>; // 48 MHz
+    type MyMono = DwtSystick<FREQ>;
 
     #[shared]
     struct Shared {
         btn: PC13<Input<PullUp>>,
-        pressed: Option<Instant<MyMono>>,
-        ms: u32,
+        pressed: Option<TimerInstantU32<FREQ>>,
+        ms: MillisDurationU32,
     }
 
     #[local]
@@ -32,7 +34,7 @@ mod app {
     #[init]
     fn init(mut ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         let rcc = ctx.device.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(48.mhz()).freeze();
+        let clocks = rcc.cfgr.sysclk(FREQ.hz()).freeze();
 
         let gpioa = ctx.device.GPIOA.split();
         let led = gpioa.pa5.into_push_pull_output();
@@ -59,7 +61,7 @@ mod app {
             Shared {
                 btn,
                 pressed: None,
-                ms: 500,
+                ms: 500.millis(),
             },
             Local { led },
             init::Monotonics(mono),
@@ -74,7 +76,7 @@ mod app {
     #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
         ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
-        debounce::spawn_after(Milliseconds(30_u32)).ok();
+        debounce::spawn_after(30.millis()).ok();
     }
 
     #[task(shared = [btn, ms, pressed], local = [clear: Option<clear::SpawnHandle> = None])]
@@ -85,18 +87,13 @@ mod app {
         (ctx.shared.btn, ctx.shared.pressed, ctx.shared.ms).lock(|btn, pressed, ms| {
             if btn.is_low() {
                 if let Some(instant) = pressed.take() {
-                    let diff: Option<Milliseconds> = monotonics::MyMono::now()
-                        .checked_duration_since(&instant)
-                        .and_then(|d| d.try_into().ok());
-                    if let Some(Milliseconds(t)) = diff {
-                        *ms = t;
-                        defmt::info!("{} bpm", 60_000 / *ms);
-                    }
+                    *ms = (monotonics::now() - instant).convert();
+                    defmt::info!("{:?} bpm", 60_000 / (*ms).ticks());
                 }
-                pressed.replace(monotonics::MyMono::now());
+                pressed.replace(monotonics::now());
             }
         });
-        *ctx.local.clear = clear::spawn_after(Milliseconds(2000_u32)).ok();
+        *ctx.local.clear = clear::spawn_after(2_000.millis()).ok();
     }
 
     #[task(shared = [pressed])]
@@ -106,9 +103,9 @@ mod app {
 
     #[task(shared = [ms], local = [led])]
     fn blink(mut ctx: blink::Context) {
-        blink::spawn_after(Milliseconds(ctx.shared.ms.lock(|t| *t))).ok();
+        blink::spawn_after(ctx.shared.ms.lock(|t| *t).convert()).ok();
         ctx.local.led.set_high();
-        cortex_m::asm::delay(480_000);
+        cortex_m::asm::delay(FREQ / 100);
         ctx.local.led.set_low();
     }
 }

@@ -9,10 +9,9 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers=[SPI2])]
 mod app {
     use defmt::Format;
-    use dwt_systick_monotonic::DwtSystick;
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use heapless::Vec;
     use postcard::{CobsAccumulator, FeedResult};
-    use rtic_monotonic::Milliseconds;
     use serde::{Deserialize, Serialize};
     use stm32f4xx_hal::{
         dma::{
@@ -132,7 +131,7 @@ mod app {
         ctx.shared.tx.clear_transfer_complete_interrupt();
         let cmd = ctx.local.cmd;
         *cmd = (*cmd + 1) % COMMANDS.len();
-        send_command::spawn_after(Milliseconds(2_000_u32), COMMANDS[*cmd]).ok();
+        send_command::spawn_after(2_000_u32.millis(), COMMANDS[*cmd]).ok();
     }
 
     // Triggers on RX DMA transfer complete
@@ -192,7 +191,7 @@ mod app {
             LedStatus::Off => led.set_low(),
             LedStatus::Blinking(ms) => {
                 led.toggle();
-                *ctx.shared.handle = update_led::spawn_after(Milliseconds(*ms as u32)).ok();
+                *ctx.shared.handle = update_led::spawn_after((*ms as u32).millis()).ok();
             }
         }
     }
