@@ -27,7 +27,7 @@ Start by `cargo run`-ning `src/bin/exti.rs`:
 
 ```console
 $ # `rb` is an alias for `run --bin`
-$ cargo rb exti
+$ DEFMT_LOG=info cargo rb exti
   Finished dev [optimized + debuginfo] target(s) in 0.3s
   Running `probe-run --chip STM32F411RETx target/thumbv7em-none-eabihf/debug/exti`
   (HOST) INFO  flashing program (13.39 KiB)

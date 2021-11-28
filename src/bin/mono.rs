@@ -78,6 +78,7 @@ impl<const FREQ: u32> Monotonic for MonoTimer<TIM5, FREQ> {
     unsafe fn reset(&mut self) {
         self.0.dier.modify(|_, w| w.cc1ie().set_bit());
     }
+
     #[inline(always)]
     fn now(&mut self) -> Self::Instant {
         Self::Instant::from_ticks(self.0.cnt.read().cnt().bits())

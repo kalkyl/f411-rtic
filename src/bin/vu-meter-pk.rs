@@ -6,10 +6,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
-    use dwt_systick_monotonic::{
-        fugit::{MillisDurationU32, TimerInstantU32},
-        DwtSystick, ExtU32,
-    };
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use smart_leds::{brightness, colors, SmartLedsWrite, RGB8};
     use stm32f4xx_hal::{
         gpio::{Alternate, NoPin, Pin},
@@ -37,10 +34,12 @@ mod app {
         (4096, colors::RED),
     ];
     type MeterSPI = Spi<SPI1, (NoPin, NoPin, Pin<Alternate<5>, 'A', 7>), TransferModeNormal>;
-    type Peak = (f32, TimerInstantU32<FREQ>);
+    type Peak = (f32, Instant);
 
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<FREQ>;
+    type Duration = <MyMono as rtic::Monotonic>::Duration;
+    type Instant = <MyMono as rtic::Monotonic>::Instant;
 
     #[shared]
     struct Shared {
@@ -104,14 +103,14 @@ mod app {
         (ctx.shared.env, ctx.shared.peak).lock(|(env_l, env_r), (pk_l, pk_r)| {
             *env_l = match smpl_l > *env_l {
                 true => {
-                    pk_l.replace((smpl_l, monotonics::MyMono::now()));
+                    pk_l.replace((smpl_l, monotonics::now()));
                     smpl_l
                 }
                 false => *env_l * DECAY,
             };
             *env_r = match smpl_r > *env_r {
                 true => {
-                    pk_r.replace((smpl_r, monotonics::MyMono::now()));
+                    pk_r.replace((smpl_r, monotonics::now()));
                     smpl_r
                 }
                 false => *env_r * DECAY,
@@ -156,8 +155,6 @@ mod app {
     }
 
     fn clear_peak(peak: &Option<Peak>) -> Option<Peak> {
-        peak.filter(|(_, instant)| {
-            monotonics::now() - *instant < PEAK_HOLD.millis() as MillisDurationU32
-        })
+        peak.filter(|(_, instant)| monotonics::now() - *instant < PEAK_HOLD.millis() as Duration)
     }
 }

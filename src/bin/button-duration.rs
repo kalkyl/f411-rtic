@@ -6,10 +6,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
-    use dwt_systick_monotonic::{
-        fugit::{MillisDurationU32, TimerInstantU32},
-        DwtSystick, ExtU32,
-    };
+    use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use stm32f4xx_hal::{
         gpio::{gpioc::PC13, Edge, ExtiPin, Input, PullUp},
         prelude::*,
@@ -18,6 +15,8 @@ mod app {
 
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<FREQ>;
+    type Duration = <MyMono as rtic::Monotonic>::Duration;
+    type Instant = <MyMono as rtic::Monotonic>::Instant;
 
     #[shared]
     struct Shared {
@@ -63,7 +62,7 @@ mod app {
         debounce::spawn_after(30.millis()).ok();
     }
 
-    #[task(shared = [btn], local =[hold: Option<hold::SpawnHandle> = None, pressed_at: Option<TimerInstantU32<FREQ>> = None])]
+    #[task(shared = [btn], local =[hold: Option<hold::SpawnHandle> = None, pressed_at: Option<Instant> = None])]
     fn debounce(mut ctx: debounce::Context) {
         if let Some(handle) = ctx.local.hold.take() {
             handle.cancel().ok();
@@ -76,7 +75,7 @@ mod app {
                 .local
                 .pressed_at
                 .take()
-                .map(|i| monotonics::now() - i < 1.secs() as MillisDurationU32)
+                .map(|i| monotonics::now() - i < 1.secs() as Duration)
                 .unwrap_or(false)
             {
                 defmt::info!("Short press")
