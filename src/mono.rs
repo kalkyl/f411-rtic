@@ -1,7 +1,5 @@
-#![no_std]
-#![no_main]
 // RTIC Monotonic impl for the 32-bit timers
-pub use fugit::{self, ExtU32};
+use fugit;
 use rtic_monotonic::Monotonic;
 use stm32f4xx_hal::{
     pac::{RCC, TIM2, TIM5},

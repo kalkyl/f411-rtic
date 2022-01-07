@@ -3,11 +3,10 @@
 #![no_std]
 
 use f411_rtic as _; // global logger + panicking-behavior + memory layout
-mod mono; // monotonic timer impl for TIM2
 
 #[rtic::app(device = stm32f4xx_hal::pac, dispatchers = [USART1])]
 mod app {
-    use super::mono::MonoTimer;
+    use f411_rtic::mono::MonoTimer;
     use fugit::ExtU32;
     use stm32f4xx_hal::{pac, prelude::*};
     const FREQ: u32 = 48_000_000;
