@@ -7,8 +7,10 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 #[rtic::app(device = stm32f4xx_hal::pac)]
 mod app {
     use core::fmt::Write;
+
     use ssd1306::{
-        displaysize::DisplaySize128x64, mode::TerminalMode, prelude::*, Builder, I2CDIBuilder,
+        mode::TerminalMode, prelude::*, rotation::DisplayRotation, size::DisplaySize128x64,
+        I2CDisplayInterface, Ssd1306,
     };
     use stm32f4xx_hal::{
         gpio::{
@@ -21,9 +23,12 @@ mod app {
         prelude::*,
     };
 
-    type Display = TerminalMode<
-        I2CInterface<I2c<I2C1, (PB8<Alternate<OpenDrain, 4>>, PB9<Alternate<OpenDrain, 4>>)>>,
+    type Display = Ssd1306<
+        ssd1306::prelude::I2CInterface<
+            I2c<I2C1, (PB8<Alternate<OpenDrain, 4>>, PB9<Alternate<OpenDrain, 4>>)>,
+        >,
         DisplaySize128x64,
+        TerminalMode,
     >;
 
     #[shared]
@@ -51,10 +56,10 @@ mod app {
         let i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), &clocks);
 
         // Configure the OLED display.
-        let interface = I2CDIBuilder::new().init(i2c);
-        let mut disp: TerminalMode<_, _> = Builder::new().connect(interface).into();
+        let interface = I2CDisplayInterface::new(i2c);
+        let mut disp = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
+            .into_terminal_mode();
         disp.init().ok();
-        disp.flush().ok();
         disp.clear().ok();
         disp.write_str("Hello world!\n").ok();
 
