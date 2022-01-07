@@ -21,7 +21,7 @@ impl<const FREQ: u32> MonoTimer<TIM2, FREQ> {
         timer.egr.write(|w| w.ug().set_bit());
         timer.sr.modify(|_, w| w.uif().clear_bit());
         timer.cr1.modify(|_, w| w.cen().set_bit().udis().set_bit());
-        MonoTimer(timer)
+        Self(timer)
     }
 }
 
@@ -67,7 +67,7 @@ impl<const FREQ: u32> MonoTimer<TIM5, FREQ> {
         timer.egr.write(|w| w.ug().set_bit());
         timer.sr.modify(|_, w| w.uif().clear_bit());
         timer.cr1.modify(|_, w| w.cen().set_bit().udis().set_bit());
-        MonoTimer(timer)
+        Self(timer)
     }
 }
 

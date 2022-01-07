@@ -39,12 +39,14 @@ mod app {
         btn.trigger_on_edge(&mut ctx.device.EXTI, Edge::Falling);
 
         defmt::info!("Press button!");
-        (Shared {}, Local { btn, led }, init::Monotonics())
+        (Shared {}, Local { led, btn }, init::Monotonics())
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds = EXTI15_10, local = [btn, led])]

@@ -9,12 +9,13 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 mod app {
     use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use stm32f4xx_hal::dma::traits::Stream;
+    use stm32f4xx_hal::serial;
     use stm32f4xx_hal::{
         dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamX, StreamsTuple, Transfer},
         gpio::{gpioa::PA5, Output, PushPull},
         pac::{DMA2, USART1},
         prelude::*,
-        serial::{config::*, Rx, Serial},
+        serial::{config::Config, Rx, Serial},
     };
     const BUF_SIZE: usize = 8;
     use defmt::Format;
@@ -74,7 +75,7 @@ mod app {
             .memory_increment(true);
         let mut rx =
             Transfer::init_peripheral_to_memory(stream, serial, ctx.local.rx_buf, None, dma_config);
-        rx.start(|serial| serial.listen_idle());
+        rx.start(serial::Rx::listen_idle);
 
         defmt::info!("Send commands:");
         defmt::info!("LED on: [0x1, 0x2, 0x1, 0x0]");
@@ -95,7 +96,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     // Triggers on DMA transfer complete
@@ -130,20 +133,19 @@ mod app {
 
     #[task(local = [cobs_buf: CobsAccumulator<16> = CobsAccumulator::new()], shared = [status, handle], priority = 1, capacity = 2)]
     fn parser(ctx: parser::Context, data: Vec<u8, BUF_SIZE>) {
-        match ctx.local.cobs_buf.feed::<Command>(data.as_slice()) {
-            FeedResult::Success { data: command, .. } => {
-                defmt::info!("Command: {:?}", command);
-                match command {
-                    Command::SetLed(status) => {
-                        *ctx.shared.status = status;
-                        if let Some(handle) = ctx.shared.handle.take() {
-                            handle.cancel().ok();
-                        }
-                        update_led::spawn().ok();
+        if let FeedResult::Success { data: command, .. } =
+            ctx.local.cobs_buf.feed::<Command>(data.as_slice())
+        {
+            defmt::info!("Command: {:?}", command);
+            match command {
+                Command::SetLed(status) => {
+                    *ctx.shared.status = status;
+                    if let Some(handle) = ctx.shared.handle.take() {
+                        handle.cancel().ok();
                     }
+                    update_led::spawn().ok();
                 }
             }
-            _ => (),
         };
     }
 

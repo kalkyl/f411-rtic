@@ -14,7 +14,7 @@ mod app {
         dma::{config::DmaConfig, MemoryToPeripheral, Stream7, StreamX, StreamsTuple, Transfer},
         pac::USART1,
         prelude::*,
-        serial::{config::*, Serial, Tx},
+        serial::{config::Config, Serial, Tx},
     };
     const BUF_SIZE: usize = 8;
     const FREQ: u32 = 48_000_000;
@@ -59,7 +59,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(shared = [tx])]

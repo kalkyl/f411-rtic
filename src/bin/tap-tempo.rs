@@ -70,12 +70,14 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(ExtiPin::clear_interrupt_pending_bit);
         debounce::spawn_after(30.millis()).ok();
     }
 
@@ -98,7 +100,7 @@ mod app {
 
     #[task(shared = [pressed])]
     fn clear(mut ctx: clear::Context) {
-        ctx.shared.pressed.lock(|i| i.take());
+        ctx.shared.pressed.lock(Option::take);
     }
 
     #[task(shared = [ms], local = [led])]

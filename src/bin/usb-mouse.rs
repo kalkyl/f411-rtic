@@ -13,7 +13,7 @@ mod app {
     };
     use usb_device::{bus::UsbBusAllocator, prelude::*};
     use usbd_hid::{
-        descriptor::{generator_prelude::*, MouseReport},
+        descriptor::{generator_prelude::SerializedDescriptor, MouseReport},
         hid_class::HIDClass,
     };
 
@@ -66,10 +66,7 @@ mod app {
     fn idle(mut ctx: idle::Context) -> ! {
         let counter = ctx.local.counter;
         loop {
-            let buttons = match ctx.local.btn.is_low() {
-                true => 1,
-                false => 0,
-            };
+            let buttons = if ctx.local.btn.is_low() { 1 } else { 0 };
             let report = MouseReport {
                 x: if *counter < 64 { 3 } else { -3 },
                 y: 0,
@@ -86,10 +83,6 @@ mod app {
     #[task(binds=OTG_FS, shared = [hid], local=[usb_dev])]
     fn on_usb(mut ctx: on_usb::Context) {
         let usb_dev = ctx.local.usb_dev;
-        ctx.shared.hid.lock(|hid| {
-            if !usb_dev.poll(&mut [hid]) {
-                return;
-            }
-        });
+        ctx.shared.hid.lock(|hid| if !usb_dev.poll(&mut [hid]) {});
     }
 }

@@ -51,7 +51,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds = EXTI15_10, local = [btn, pwm, level: u16 = 1])]

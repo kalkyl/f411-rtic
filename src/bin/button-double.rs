@@ -52,12 +52,14 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(ExtiPin::clear_interrupt_pending_bit);
         debounce::spawn_after(30.millis()).ok();
     }
 
@@ -69,12 +71,11 @@ mod app {
         *ctx.local.clear = clear::spawn_after(200.millis()).ok();
         (ctx.shared.btn, ctx.shared.count).lock(|btn, count| {
             if btn.is_low() {
-                match *count > 0 {
-                    true => {
-                        *count = 0;
-                        defmt::info!("Double press");
-                    }
-                    _ => defmt::info!("Single press"),
+                if *count > 0 {
+                    *count = 0;
+                    defmt::info!("Double press");
+                } else {
+                    defmt::info!("Single press");
                 }
                 *count += 1;
             }

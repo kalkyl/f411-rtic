@@ -11,7 +11,7 @@ mod app {
         dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamsTuple, Transfer},
         pac::{DMA2, USART1},
         prelude::*,
-        serial::{config::*, Rx, Serial},
+        serial::{config::Config, Rx, Serial},
     };
     const BUF_SIZE: usize = 8;
 
@@ -51,7 +51,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     // Triggers on DMA transfer complete

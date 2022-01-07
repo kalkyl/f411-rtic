@@ -59,12 +59,14 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(ExtiPin::clear_interrupt_pending_bit);
         debounce::spawn_after(30.millis()).ok();
     }
 
@@ -78,11 +80,9 @@ mod app {
             if btn.is_low() {
                 *was_pressed = true;
                 *hold = hold::spawn_after(1.secs()).ok();
-            } else {
-                if *was_pressed {
-                    *was_pressed = false;
-                    defmt::info!("Short press");
-                }
+            } else if *was_pressed {
+                *was_pressed = false;
+                defmt::info!("Short press");
             }
         });
     }

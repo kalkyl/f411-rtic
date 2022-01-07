@@ -79,7 +79,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(shared = [env], local = [t: u16 = 0])]
@@ -88,19 +90,21 @@ mod app {
         let t = ctx.local.t;
         const L: [(u16, f32); 2] = [(0, 4096.0), (700, 2048.0)];
         const R: [(u16, f32); 2] = [(0, 4096.0), (900, 600.0)];
-        let smpl_l = L.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
-        let smpl_r = R.iter().find(|s| s.0 == *t).map(|s| s.1).unwrap_or(0.0);
+        let smpl_l = L.iter().find(|s| s.0 == *t).map_or(0.0, |s| s.1);
+        let smpl_r = R.iter().find(|s| s.0 == *t).map_or(0.0, |s| s.1);
         *t = (*t + 1) % 2048;
 
         // Calc and update signal envelopes
         ctx.shared.env.lock(|(env_l, env_r)| {
-            *env_l = match smpl_l > *env_l {
-                true => smpl_l,
-                false => *env_l * DECAY,
+            *env_l = if smpl_l > *env_l {
+                smpl_l
+            } else {
+                *env_l * DECAY
             };
-            *env_r = match smpl_r > *env_r {
-                true => smpl_r,
-                false => *env_r * DECAY,
+            *env_r = if smpl_r > *env_r {
+                smpl_r
+            } else {
+                *env_r * DECAY
             };
         });
         mock_adc::spawn_after(900.millis()).ok();
@@ -111,7 +115,7 @@ mod app {
         let (env_l, env_r) = ctx.shared.env.lock(|env| *env);
         let left = bargraph(&THRESHOLDS, env_l);
         let right = bargraph(&THRESHOLDS, env_r);
-        let pixels = left.iter().chain(right.iter().rev()).cloned();
+        let pixels = left.iter().chain(right.iter().rev()).copied();
         ctx.local.meter.write(brightness(pixels, 10)).ok();
         update_leds::spawn_after(15.millis()).ok();
     }
