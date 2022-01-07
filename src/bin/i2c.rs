@@ -14,7 +14,7 @@ mod app {
         gpio::{
             gpiob::{PB8, PB9},
             gpioc::PC13,
-            Alternate, Edge, ExtiPin, Input, OpenDrain, PullUp, AF4,
+            Alternate, Edge, ExtiPin, Input, OpenDrain, PullUp,
         },
         i2c::I2c,
         pac::I2C1,
@@ -28,15 +28,7 @@ mod app {
     struct Local {
         btn: PC13<Input<PullUp>>,
         disp: TerminalMode<
-            I2CInterface<
-                I2c<
-                    I2C1,
-                    (
-                        PB8<Alternate<OpenDrain, AF4>>,
-                        PB9<Alternate<OpenDrain, AF4>>,
-                    ),
-                >,
-            >,
+            I2CInterface<I2c<I2C1, (PB8<Alternate<OpenDrain, 4>>, PB9<Alternate<OpenDrain, 4>>)>>,
             DisplaySize128x64,
         >,
     }
