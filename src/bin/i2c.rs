@@ -14,7 +14,7 @@ mod app {
         gpio::{
             gpiob::{PB8, PB9},
             gpioc::PC13,
-            AlternateOD, Edge, ExtiPin, Input, PullUp, AF4,
+            Alternate, Edge, ExtiPin, Input, OpenDrain, PullUp, AF4,
         },
         i2c::I2c,
         pac::I2C1,
@@ -28,7 +28,15 @@ mod app {
     struct Local {
         btn: PC13<Input<PullUp>>,
         disp: TerminalMode<
-            I2CInterface<I2c<I2C1, (PB8<AlternateOD<AF4>>, PB9<AlternateOD<AF4>>)>>,
+            I2CInterface<
+                I2c<
+                    I2C1,
+                    (
+                        PB8<Alternate<OpenDrain, AF4>>,
+                        PB9<Alternate<OpenDrain, AF4>>,
+                    ),
+                >,
+            >,
             DisplaySize128x64,
         >,
     }
@@ -46,7 +54,7 @@ mod app {
         let gpiob = ctx.device.GPIOB.split();
         let scl = gpiob.pb8.into_alternate_open_drain();
         let sda = gpiob.pb9.into_alternate_open_drain();
-        let i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), clocks);
+        let i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), &clocks);
 
         // Configure the OLED display.
         let interface = I2CDIBuilder::new().init(i2c);

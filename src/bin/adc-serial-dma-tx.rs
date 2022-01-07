@@ -78,7 +78,7 @@ mod app {
             dma: stm32f4xx_hal::serial::config::DmaConfig::Tx,
             ..Config::default()
         };
-        let serial = Serial::tx(ctx.device.USART1, tx_pin, serial_config, clocks).unwrap();
+        let serial = Serial::tx(ctx.device.USART1, tx_pin, serial_config, &clocks).unwrap();
         let tx =
             Transfer::init_memory_to_peripheral(dma.7, serial, ctx.local.tx_buf, None, dma_config);
 

@@ -9,7 +9,7 @@ mod app {
     use dwt_systick_monotonic::{DwtSystick, ExtU32};
     use smart_leds::{brightness, colors, SmartLedsWrite, RGB8};
     use stm32f4xx_hal::{
-        gpio::{Alternate, NoPin, Pin},
+        gpio::{Alternate, NoPin, Pin, PushPull},
         pac::SPI1,
         prelude::*,
         spi::{Spi, TransferModeNormal},
@@ -32,7 +32,8 @@ mod app {
         (3072, colors::RED),
         (4096, colors::RED),
     ];
-    type MeterSPI = Spi<SPI1, (NoPin, NoPin, Pin<Alternate<5>, 'A', 7>), TransferModeNormal>;
+    type MeterSPI =
+        Spi<SPI1, (NoPin, NoPin, Pin<Alternate<PushPull, 5>, 'A', 7>), TransferModeNormal>;
 
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = DwtSystick<FREQ>;
@@ -63,7 +64,7 @@ mod app {
             (NoPin, NoPin, mosi),
             ws2812_spi::MODE,
             stm32f4xx_hal::time::KiloHertz(3_000),
-            clocks,
+            &clocks,
         );
         let meter = ws2812_spi::Ws2812::new(spi);
 

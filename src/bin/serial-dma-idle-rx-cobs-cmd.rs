@@ -66,7 +66,7 @@ mod app {
             dma: stm32f4xx_hal::serial::config::DmaConfig::Rx,
             ..Config::default()
         };
-        let serial = Serial::rx(ctx.device.USART1, rx_pin, serial_config, clocks).unwrap();
+        let serial = Serial::rx(ctx.device.USART1, rx_pin, serial_config, &clocks).unwrap();
 
         let stream = StreamsTuple::new(ctx.device.DMA2).5;
         let dma_config = DmaConfig::default()

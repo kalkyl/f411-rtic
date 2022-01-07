@@ -80,7 +80,7 @@ mod app {
             ..Config::default()
         };
         let serial =
-            Serial::new(ctx.device.USART1, (tx_pin, rx_pin), serial_config, clocks).unwrap();
+            Serial::new(ctx.device.USART1, (tx_pin, rx_pin), serial_config, &clocks).unwrap();
 
         let (serial_tx, serial_rx) = serial.split();
         let dma2 = StreamsTuple::new(ctx.device.DMA2);
