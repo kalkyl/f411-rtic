@@ -12,7 +12,7 @@ mod app {
         dma::{config::DmaConfig, PeripheralToMemory, Stream5, StreamX, StreamsTuple, Transfer},
         pac::{DMA2, USART1},
         prelude::*,
-        serial::{config::*, Rx, Serial},
+        serial::{config::Config, Rx, Serial},
     };
     const BUF_SIZE: usize = 8;
     use defmt::Format;
@@ -64,7 +64,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     // Triggers on DMA transfer complete
@@ -99,11 +101,9 @@ mod app {
 
     #[task(local = [cobs_buf: CobsAccumulator<16> = CobsAccumulator::new()], priority = 1, capacity = 2)]
     fn parser(ctx: parser::Context, data: Vec<u8, BUF_SIZE>) {
-        match ctx.local.cobs_buf.feed::<MyData>(data.as_slice()) {
-            FeedResult::Success { data, .. } => {
-                defmt::info!("{:?}", data);
-            }
-            _ => (),
+        if let FeedResult::Success { data, .. } = ctx.local.cobs_buf.feed::<MyData>(data.as_slice())
+        {
+            defmt::info!("{:?}", data);
         };
     }
 }

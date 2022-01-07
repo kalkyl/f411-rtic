@@ -19,7 +19,7 @@ mod app {
         },
         pac::{ADC1, DMA2, USART1},
         prelude::*,
-        serial::{config::*, Serial, Tx},
+        serial::{config::Config, Serial, Tx},
     };
     const BUF_SIZE: usize = 4;
     const FREQ: u32 = 84_000_000;
@@ -97,7 +97,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(shared=[adc_transfer], priority = 2)]

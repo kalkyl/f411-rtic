@@ -21,7 +21,7 @@ mod app {
         gpio::{gpioa::PA5, Output, PushPull},
         pac::{DMA2, USART1},
         prelude::*,
-        serial::{config::*, Rx, Serial, Tx},
+        serial::{self, config::Config, Rx, Serial, Tx},
     };
     const BUF_SIZE: usize = 8;
     const FREQ: u32 = 48_000_000;
@@ -91,7 +91,7 @@ mod app {
         let mut rx =
             Transfer::init_peripheral_to_memory(dma2.5, serial_rx, rx_buf, None, dma_config);
         let tx = Transfer::init_memory_to_peripheral(dma2.7, serial_tx, tx_buf, None, dma_config);
-        rx.start(|serial| serial.listen_idle());
+        rx.start(serial::Rx::listen_idle);
 
         send_command::spawn(COMMANDS[0]).ok();
         (
@@ -110,7 +110,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(shared = [tx])]
@@ -166,20 +168,19 @@ mod app {
 
     #[task(local = [cobs_buf: CobsAccumulator<16> = CobsAccumulator::new()], shared = [status, handle], priority = 1, capacity = 2)]
     fn parser(ctx: parser::Context, data: Vec<u8, BUF_SIZE>) {
-        match ctx.local.cobs_buf.feed::<Command>(data.as_slice()) {
-            FeedResult::Success { data: command, .. } => {
-                defmt::info!("RX: {:?}", command);
-                match command {
-                    Command::SetLed(status) => {
-                        *ctx.shared.status = status;
-                        if let Some(handle) = ctx.shared.handle.take() {
-                            handle.cancel().ok();
-                        }
-                        update_led::spawn().ok();
+        if let FeedResult::Success { data: command, .. } =
+            ctx.local.cobs_buf.feed::<Command>(data.as_slice())
+        {
+            defmt::info!("RX: {:?}", command);
+            match command {
+                Command::SetLed(status) => {
+                    *ctx.shared.status = status;
+                    if let Some(handle) = ctx.shared.handle.take() {
+                        handle.cancel().ok();
                     }
+                    update_led::spawn().ok();
                 }
             }
-            _ => (),
         };
     }
 

@@ -49,12 +49,14 @@ mod app {
             .build();
 
         defmt::info!("Send me a string!");
-        (Shared {}, Local { serial, usb_dev }, init::Monotonics())
+        (Shared {}, Local { usb_dev, serial }, init::Monotonics())
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds=OTG_FS, local = [serial, usb_dev])]

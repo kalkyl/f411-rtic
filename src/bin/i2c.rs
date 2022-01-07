@@ -21,16 +21,18 @@ mod app {
         prelude::*,
     };
 
+    type Display = TerminalMode<
+        I2CInterface<I2c<I2C1, (PB8<Alternate<OpenDrain, 4>>, PB9<Alternate<OpenDrain, 4>>)>>,
+        DisplaySize128x64,
+    >;
+
     #[shared]
     struct Shared {}
 
     #[local]
     struct Local {
         btn: PC13<Input<PullUp>>,
-        disp: TerminalMode<
-            I2CInterface<I2c<I2C1, (PB8<Alternate<OpenDrain, 4>>, PB9<Alternate<OpenDrain, 4>>)>>,
-            DisplaySize128x64,
-        >,
+        disp: Display,
     }
 
     #[init]
@@ -69,7 +71,9 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds = EXTI15_10, local = [btn, disp, cnt: u8 = 65])]

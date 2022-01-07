@@ -53,12 +53,14 @@ mod app {
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        loop {}
+        loop {
+            continue;
+        }
     }
 
     #[task(binds = EXTI15_10, shared = [btn])]
     fn on_exti(mut ctx: on_exti::Context) {
-        ctx.shared.btn.lock(|b| b.clear_interrupt_pending_bit());
+        ctx.shared.btn.lock(ExtiPin::clear_interrupt_pending_bit);
         debounce::spawn_after(30.millis()).ok();
     }
 
@@ -70,16 +72,13 @@ mod app {
         if ctx.shared.btn.lock(|b| b.is_low()) {
             ctx.local.pressed_at.replace(monotonics::MyMono::now());
             *ctx.local.hold = hold::spawn_after(1.secs()).ok();
-        } else {
-            if ctx
-                .local
-                .pressed_at
-                .take()
-                .map(|i| monotonics::now() - i < 1.secs() as Duration)
-                .unwrap_or(false)
-            {
-                defmt::info!("Short press")
-            }
+        } else if ctx
+            .local
+            .pressed_at
+            .take()
+            .map_or(false, |i| monotonics::now() - i < 1.secs() as Duration)
+        {
+            defmt::info!("Short press");
         }
     }
 
