@@ -4,8 +4,8 @@ name = "f411-rtic"
 edition = "2021"
 version = "0.1.0"
 
-[workspace]
-members = ["testsuite"]
+# [workspace]
+# members = ["testsuite"]
 
 [dependencies]
 cortex-m = "0.7.1"
@@ -29,10 +29,13 @@ ws2812-spi = "0.4.0"
 smart-leds-trait = "0.2.0"
 smart-leds = "0.3.0"
 
+[dependencies.stm32_i2s_v12x]
+version = "0.2.0"
+
 [dependencies.stm32f4xx-hal]
 # version = "0.10.1"
 git = "https://github.com/stm32-rs/stm32f4xx-hal"
-features = ["rt", "stm32f411", "usb_fs"]
+features = ["rt", "stm32f411", "usb_fs", "i2s"]
 
 # [patch.crates-io]
 # stm32f4xx-hal = { path = "../stm32f4xx-hal" }
