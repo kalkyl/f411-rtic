@@ -72,7 +72,6 @@ mod app {
                 y: 0,
                 buttons,
                 wheel: 0,
-                pan: 0,
             };
             ctx.shared.hid.lock(|hid| hid.push_input(&report).ok());
             *counter = (*counter + 1) % 128;

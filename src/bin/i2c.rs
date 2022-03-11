@@ -16,7 +16,7 @@ mod app {
         gpio::{
             gpiob::{PB8, PB9},
             gpioc::PC13,
-            Alternate, Edge, ExtiPin, Input, OpenDrain, PullUp,
+            AlternateOD, Edge, ExtiPin, Input, PullUp,
         },
         i2c::I2c,
         pac::I2C1,
@@ -24,9 +24,7 @@ mod app {
     };
 
     type Display = Ssd1306<
-        ssd1306::prelude::I2CInterface<
-            I2c<I2C1, (PB8<Alternate<OpenDrain, 4>>, PB9<Alternate<OpenDrain, 4>>)>,
-        >,
+        ssd1306::prelude::I2CInterface<I2c<I2C1, (PB8<AlternateOD<4>>, PB9<AlternateOD<4>>)>>,
         DisplaySize128x64,
         TerminalMode,
     >;
@@ -53,7 +51,7 @@ mod app {
         let gpiob = ctx.device.GPIOB.split();
         let scl = gpiob.pb8.into_alternate_open_drain();
         let sda = gpiob.pb9.into_alternate_open_drain();
-        let i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), &clocks);
+        let i2c = I2c::new(ctx.device.I2C1, (scl, sda), 400.khz(), clocks);
 
         // Configure the OLED display.
         let interface = I2CDisplayInterface::new(i2c);

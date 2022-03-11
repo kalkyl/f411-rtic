@@ -11,7 +11,7 @@ mod app {
         gpio::{gpioc::PC13, Edge, ExtiPin, Input, PullUp},
         pac::TIM2,
         prelude::*,
-        pwm::{self, PwmChannel},
+        pwm::{self, PwmChannels},
         timer::Timer,
     };
 
@@ -21,7 +21,7 @@ mod app {
     #[local]
     struct Local {
         btn: PC13<Input<PullUp>>,
-        pwm: PwmChannel<TIM2, C1>,
+        pwm: PwmChannels<TIM2, C1>,
     }
 
     #[init]
