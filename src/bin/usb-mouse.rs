@@ -6,6 +6,7 @@ use f411_rtic as _; // global logger + panicking-behavior + memory layout
 
 #[rtic::app(device = stm32f4xx_hal::pac)]
 mod app {
+    use core::mem::MaybeUninit;
     use stm32f4xx_hal::{
         gpio::{gpioc::PC13, Input, PullUp},
         otg_fs::{UsbBus, UsbBusType, USB},
@@ -28,7 +29,7 @@ mod app {
         usb_dev: UsbDevice<'static, UsbBus<USB>>,
     }
 
-    #[init(local = [ep_memory: [u32; 1024] = [0; 1024], usb_bus: Option<UsbBusAllocator<UsbBusType>> = None])]
+    #[init(local = [ep_memory: [u32; 1024] = [0; 1024], usb_bus: MaybeUninit<UsbBusAllocator<UsbBusType>> = MaybeUninit::uninit()])]
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         // Set up the system clock.
         let rcc = ctx.device.RCC.constrain();
@@ -48,10 +49,10 @@ mod app {
         };
 
         let usb_bus = ctx.local.usb_bus;
-        usb_bus.replace(UsbBus::new(usb, ctx.local.ep_memory));
+        let usb_bus = usb_bus.write(UsbBus::new(usb, ctx.local.ep_memory));
 
-        let hid = HIDClass::new(usb_bus.as_ref().unwrap(), MouseReport::desc(), 60);
-        let usb_dev = UsbDeviceBuilder::new(usb_bus.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
+        let hid = HIDClass::new(usb_bus, MouseReport::desc(), 60);
+        let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0xc410, 0x0000))
             .manufacturer("Fake company")
             .product("Mouse")
             .serial_number("TEST")
